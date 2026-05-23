@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+
+# Next.js
+.next
+out
+
+# Env files — NUNCA subir al repo
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build
+dist
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode
+.idea
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Assets grandes (copiar manualmente — ver CLAUDE.md)
+public/assets/img/
+public/assets/sounds/
