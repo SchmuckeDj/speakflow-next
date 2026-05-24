@@ -6,19 +6,30 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function getToken(): string | null {
-  try {
-    return localStorage.getItem("sf_token");
-  } catch {
-    return null;
-  }
+  try { return localStorage.getItem("sf_token"); }
+  catch { return null; }
 }
 
-function saveTokens(access: string, refresh: string) {
+export function saveTokens(access: string, refresh: string) {
   localStorage.setItem("sf_token",         access);
   localStorage.setItem("sf_refresh_token", refresh);
 }
 
-function clearTokens() {
+export async function clearTokens() {
+  // Invalidar refresh token en el servidor
+  const refresh = localStorage.getItem("sf_refresh_token");
+  if (refresh) {
+    try {
+      await fetch(`${API_URL}/api/auth/logout/`, {
+        method:  "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${getToken() ?? ""}`,
+        },
+        body: JSON.stringify({ refresh }),
+      });
+    } catch {}
+  }
   localStorage.removeItem("sf_token");
   localStorage.removeItem("sf_refresh_token");
   localStorage.removeItem("sf_user");
@@ -29,14 +40,15 @@ async function refreshAccessToken(): Promise<string | null> {
   const refresh = localStorage.getItem("sf_refresh_token");
   if (!refresh) return null;
   try {
-    const res  = await fetch(`${API_URL}/api/auth/refresh/`, {
+    const res = await fetch(`${API_URL}/api/auth/refresh/`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ refresh }),
     });
-    if (!res.ok) { clearTokens(); return null; }
+    if (!res.ok) { await clearTokens(); return null; }
     const data = await res.json();
     localStorage.setItem("sf_token", data.access);
+    if (data.refresh) localStorage.setItem("sf_refresh_token", data.refresh);
     return data.access;
   } catch {
     return null;
@@ -69,7 +81,6 @@ export async function apiFetch(path: string, options: ApiOptions = {}): Promise<
       headers["Authorization"] = `Bearer ${newToken}`;
       res = await fetch(`${API_URL}${path}`, { ...fetchOptions, headers });
     } else {
-      clearTokens();
       window.location.href = "/login";
     }
   }
@@ -77,4 +88,4 @@ export async function apiFetch(path: string, options: ApiOptions = {}): Promise<
   return res;
 }
 
-export { saveTokens, clearTokens, API_URL };
+export { API_URL };
