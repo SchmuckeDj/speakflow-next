@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Script from "next/script";
 
 const FEATURES = [
   { icon: "✦", title: "AI Chat Coach",       desc: "Practica conversaciones reales en inglés con IA que corrige tus errores al instante. Job interviews, viajes, gaming — elige tu escenario." },
@@ -20,25 +19,23 @@ const LEVELS = [
 ];
 
 const FAQ = [
-  { q: "¿SpeakFlow es gratis?", a: "Sí, puedes usar SpeakFlow completamente gratis. Sin tarjeta de crédito." },
-  { q: "¿Para qué nivel de inglés es?", a: "Para todos los niveles. Desde principiante absoluto (A1) hasta avanzado (C2) según el marco CEFR." },
-  { q: "¿Necesito conocimientos previos?", a: "No. SpeakFlow detecta tu nivel en el registro y adapta el contenido automáticamente." },
-  { q: "¿Funciona en móvil?", a: "Sí, SpeakFlow es completamente responsive y funciona en cualquier dispositivo." },
+  { q: "¿SpeakFlow es gratis?",           a: "Sí, puedes usar SpeakFlow completamente gratis. Sin tarjeta de crédito." },
+  { q: "¿Para qué nivel de inglés es?",   a: "Para todos los niveles. Desde principiante absoluto (A1) hasta avanzado (C2) según el marco CEFR." },
+  { q: "¿Necesito conocimientos previos?",a: "No. SpeakFlow detecta tu nivel en el registro y adapta el contenido automáticamente." },
+  { q: "¿Funciona en móvil?",             a: "Sí, SpeakFlow es completamente responsive y funciona en cualquier dispositivo." },
   { q: "¿Cuánto tiempo al día necesito?", a: "Con 15 minutos al día es suficiente para ver progreso. Lo importante es la constancia." },
 ];
 
-// JSON-LD schemas
 const schemaWebApp = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "SpeakFlow",
   url: "https://speakflow.app",
-  description: "Aprende inglés hablando con inteligencia artificial. Chat con IA, pronunciación, vocabulario A1-C2 y juegos.",
+  description: "Aprende inglés hablando con inteligencia artificial.",
   applicationCategory: "EducationalApplication",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   inLanguage: "es",
-  audience: { "@type": "Audience", audienceType: "Hispanohablantes aprendiendo inglés" },
 };
 
 const schemaOrg = {
@@ -46,9 +43,7 @@ const schemaOrg = {
   "@type": "Organization",
   name: "SpeakFlow",
   url: "https://speakflow.app",
-  logo: "https://speakflow.app/icon-512.png",
   foundingLocation: "Santo Domingo, República Dominicana",
-  description: "Plataforma de aprendizaje de inglés con inteligencia artificial para hispanohablantes.",
 };
 
 const schemaFAQ = {
@@ -64,17 +59,16 @@ const schemaFAQ = {
 export default function LandingPage() {
   return (
     <>
-      {/* JSON-LD */}
-      <Script id="schema-webapp"  type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaWebApp) }} />
-      <Script id="schema-org"     type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }} />
-      <Script id="schema-faq"     type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaFAQ) }} />
+      {/* JSON-LD — script nativo para evitar bugs de next/script en prerender */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaWebApp) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaFAQ) }} />
 
       <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
 
         {/* Nav */}
         <header className="sticky top-0 z-50 border-b border-[var(--color-border)] backdrop-blur-xl"
-          style={{ background: "rgba(10,10,15,0.85)" }}
-          role="banner">
+          style={{ background: "rgba(10,10,15,0.85)" }} role="banner">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
             <Link href="/" aria-label="SpeakFlow — Inicio" className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-acc)] shadow-[0_0_12px_var(--color-acc)]" aria-hidden="true" />
@@ -127,7 +121,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            <div className="flex items-center justify-center gap-2 mt-10 flex-wrap" aria-label="Niveles disponibles: A1 al C2">
+            <div className="flex items-center justify-center gap-2 mt-10 flex-wrap">
               {LEVELS.map(({ level, label, color }) => (
                 <div key={level} className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-xs">
                   <span className={`font-bold ${color}`}>{level}</span>
@@ -140,9 +134,7 @@ export default function LandingPage() {
           {/* Features */}
           <section aria-labelledby="features-heading" className="max-w-5xl mx-auto px-6 py-16">
             <div className="text-center mb-12">
-              <h2 id="features-heading" className="text-2xl font-semibold mb-3">
-                Todo lo que necesitas para aprender inglés con IA
-              </h2>
+              <h2 id="features-heading" className="text-2xl font-semibold mb-3">Todo lo que necesitas para aprender inglés con IA</h2>
               <p className="text-[var(--color-text-2)] text-sm">6 módulos diseñados para aprender haciendo, no memorizando.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -157,8 +149,7 @@ export default function LandingPage() {
           </section>
 
           {/* Stats */}
-          <section aria-labelledby="stats-heading" className="border-y border-[var(--color-border)] py-12" style={{ background: "var(--color-surface)" }}>
-            <h2 id="stats-heading" className="sr-only">Estadísticas de SpeakFlow</h2>
+          <section className="border-y border-[var(--color-border)] py-12" style={{ background: "var(--color-surface)" }}>
             <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               {[
                 { value: "119+", label: "palabras A1–C2" },
@@ -174,7 +165,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* FAQ — importante para SEO */}
+          {/* FAQ */}
           <section aria-labelledby="faq-heading" className="max-w-3xl mx-auto px-6 py-16">
             <div className="text-center mb-10">
               <h2 id="faq-heading" className="text-2xl font-semibold mb-3">Preguntas frecuentes</h2>
@@ -182,8 +173,7 @@ export default function LandingPage() {
             </div>
             <div className="space-y-3">
               {FAQ.map(({ q, a }) => (
-                <details key={q}
-                  className="group rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+                <details key={q} className="group rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
                   <summary className="flex items-center justify-between px-5 py-4 cursor-pointer text-sm font-medium list-none">
                     {q}
                     <span className="text-[var(--color-text-3)] group-open:rotate-180 transition-transform duration-200 shrink-0 ml-4">▾</span>
@@ -195,8 +185,8 @@ export default function LandingPage() {
           </section>
 
           {/* CTA */}
-          <section aria-labelledby="cta-heading" className="max-w-5xl mx-auto px-6 py-20 text-center">
-            <h2 id="cta-heading" className="text-3xl font-bold mb-4 tracking-tight">
+          <section className="max-w-5xl mx-auto px-6 py-20 text-center">
+            <h2 className="text-3xl font-bold mb-4 tracking-tight">
               Tu próximo trabajo remoto<br />empieza con una conversación
             </h2>
             <p className="text-[var(--color-text-2)] mb-8 max-w-md mx-auto">
@@ -210,7 +200,6 @@ export default function LandingPage() {
           </section>
         </main>
 
-        {/* Footer */}
         <footer className="border-t border-[var(--color-border)] py-8" role="contentinfo">
           <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[var(--color-text-3)]">
             <p>SpeakFlow © 2026 · Hecho con IA en Santo Domingo, República Dominicana 🇩🇴</p>

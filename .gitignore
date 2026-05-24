@@ -31,3 +31,5 @@ npm-debug.log*
 # Assets grandes (copiar manualmente — ver CLAUDE.md)
 public/assets/img/
 public/assets/sounds/
+
+.vercel
