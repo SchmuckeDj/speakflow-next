@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import type { CEFRLevel } from "@/lib/types";
+import { apiFetch } from "@/lib/api";
 
 const LEVELS: { level: CEFRLevel; label: string; desc: string; examples: string[] }[] = [
-  { level: "A1", label: "Principiante",    desc: "Conozco palabras básicas como hello, yes, no.",                      examples: ["Hello, my name is...", "I am from...", "I like food"] },
-  { level: "A2", label: "Básico",          desc: "Puedo hablar de temas cotidianos simples.",                           examples: ["I go to school every day", "She works in an office", "Do you like coffee"] },
-  { level: "B1", label: "Intermedio",      desc: "Me defiendo en conversaciones sobre temas familiares.",               examples: ["I have been working here for two years", "If I had more time", "She suggested trying a new approach"] },
-  { level: "B2", label: "Intermedio alto", desc: "Puedo conversar con fluidez con hablantes nativos.",                  examples: ["The implications are significant", "She articulated her point clearly", "We need to leverage our strengths"] },
-  { level: "C1", label: "Avanzado",        desc: "Me expreso con precisión en contextos profesionales.",                examples: ["A nuanced perspective on this matter", "The ambiguous requirements led to...", "Establishing coherent priorities"] },
-  { level: "C2", label: "Maestro",         desc: "Domino el inglés casi como nativo.",                                  examples: ["An inextricable paradigm shift", "The ubiquitous nature of...", "Simultaneously compelling and ephemeral"] },
+  { level: "A1", label: "Principiante",    desc: "Conozco palabras básicas como hello, yes, no.",                examples: ["Hello, my name is...", "I am from...", "I like food"] },
+  { level: "A2", label: "Básico",          desc: "Puedo hablar de temas cotidianos simples.",                    examples: ["I go to school every day", "She works in an office", "Do you like coffee"] },
+  { level: "B1", label: "Intermedio",      desc: "Me defiendo en conversaciones sobre temas familiares.",         examples: ["I have been working here for two years", "If I had more time", "She suggested trying a new approach"] },
+  { level: "B2", label: "Intermedio alto", desc: "Puedo conversar con fluidez con hablantes nativos.",            examples: ["The implications are significant", "She articulated her point clearly", "We need to leverage our strengths"] },
+  { level: "C1", label: "Avanzado",        desc: "Me expreso con precisión en contextos profesionales.",          examples: ["A nuanced perspective on this matter", "The ambiguous requirements led to...", "Establishing coherent priorities"] },
+  { level: "C2", label: "Maestro",         desc: "Domino el inglés casi como nativo.",                            examples: ["An inextricable paradigm shift", "The ubiquitous nature of...", "Simultaneously compelling and ephemeral"] },
 ];
 
 const GOALS = [
@@ -25,10 +26,10 @@ const GOALS = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [step, setStep]                   = useState<"level" | "goal">("level");
-  const [selectedLevel, setSelectedLevel] = useState<CEFRLevel | null>(null);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [saving, setSaving]               = useState(false);
+  const [step,           setStep]           = useState<"level" | "goal">("level");
+  const [selectedLevel,  setSelectedLevel]  = useState<CEFRLevel | null>(null);
+  const [selectedGoals,  setSelectedGoals]  = useState<string[]>([]);
+  const [saving,         setSaving]         = useState(false);
 
   function toggleGoal(id: string) {
     setSelectedGoals((prev) => prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]);
@@ -36,7 +37,14 @@ export default function OnboardingScreen() {
 
   async function finish() {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
+    try {
+      await apiFetch("/api/auth/onboarding/", {
+        method: "PATCH",
+        body:   JSON.stringify({ level: selectedLevel, goals: selectedGoals }),
+      });
+    } catch {}
+
+    // Actualizar localStorage también
     const existing = JSON.parse(localStorage.getItem("sf_user") || "{}");
     localStorage.setItem("sf_user", JSON.stringify({ ...existing, level: selectedLevel, goals: selectedGoals, isNew: false }));
     document.cookie = "sf_session=1; path=/; max-age=604800; SameSite=Lax";
@@ -45,23 +53,19 @@ export default function OnboardingScreen() {
 
   return (
     <div className="w-full max-w-lg space-y-6">
-      {/* Header */}
       <div className="text-center space-y-1">
         <div className="flex items-center justify-center gap-2 mb-4">
           <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-acc)] shadow-[0_0_12px_var(--color-acc)]" />
           <span className="font-semibold text-lg tracking-tight">SpeakFlow</span>
         </div>
 
-        {/* Steps */}
         <div className="flex items-center justify-center gap-2 mb-4">
           {(["level", "goal"] as const).map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-6 h-6 rounded-full text-xs font-medium flex items-center justify-center transition-colors ${
-                step === s
-                  ? "bg-[var(--color-acc)] text-white"
-                  : step === "goal" && s === "level"
-                    ? "bg-[var(--color-acc)]/30 text-[var(--color-acc)]"
-                    : "bg-[var(--color-surface-2)] text-[var(--color-text-3)]"
+                step === s ? "bg-[var(--color-acc)] text-white" :
+                step === "goal" && s === "level" ? "bg-[var(--color-acc)]/30 text-[var(--color-acc)]" :
+                "bg-[var(--color-surface-2)] text-[var(--color-text-3)]"
               }`}>{i + 1}</div>
               {i < 1 && <div className="w-8 h-px bg-[var(--color-border)]" />}
             </div>
@@ -76,7 +80,6 @@ export default function OnboardingScreen() {
         </p>
       </div>
 
-      {/* Step 1 — Nivel */}
       {step === "level" && (
         <div className="space-y-2">
           {LEVELS.map(({ level, label, desc, examples }) => (
@@ -111,7 +114,6 @@ export default function OnboardingScreen() {
         </div>
       )}
 
-      {/* Step 2 — Objetivo */}
       {step === "goal" && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

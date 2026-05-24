@@ -4,13 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
+import { apiFetch, saveTokens } from "@/lib/api";
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,16 +19,32 @@ export default function LoginForm() {
     setError("");
     setLoading(true);
 
-    // TODO: reemplazar por fetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) })
-    await new Promise((r) => setTimeout(r, 900));
+    try {
+      const res = await apiFetch("/api/auth/login/", {
+        method: "POST",
+        body:   JSON.stringify({ email, password }),
+        auth:   false,
+      });
 
-    if (email && password.length >= 6) {
-      localStorage.setItem("sf_user", JSON.stringify({ name: email.split("@")[0], email, level: "B1" }));
-      // Setear cookie de sesión para el middleware
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Credenciales inválidas.");
+        setLoading(false);
+        return;
+      }
+
+      saveTokens(data.tokens.access, data.tokens.refresh);
+      localStorage.setItem("sf_user", JSON.stringify({
+        name:  data.user.username,
+        email: data.user.email,
+        level: data.user.level || "B1",
+      }));
       document.cookie = "sf_session=1; path=/; max-age=604800; SameSite=Lax";
       router.push("/dashboard");
-    } else {
-      setError("Contraseña muy corta (mínimo 6 caracteres).");
+
+    } catch {
+      setError("No se pudo conectar al servidor.");
       setLoading(false);
     }
   }

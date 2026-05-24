@@ -4,14 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
+import { apiFetch, saveTokens } from "@/lib/api";
 
 export default function RegisterForm() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name,     setName]     = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,12 +21,36 @@ export default function RegisterForm() {
     setError("");
     setLoading(true);
 
-    // TODO: reemplazar por fetch("/api/auth/register", { method: "POST", ... })
-    await new Promise((r) => setTimeout(r, 900));
+    try {
+      const res = await apiFetch("/api/auth/register/", {
+        method: "POST",
+        body:   JSON.stringify({ username: name, email, password }),
+        auth:   false,
+      });
 
-    localStorage.setItem("sf_user", JSON.stringify({ name, email, level: null, isNew: true }));
-    document.cookie = "sf_session=1; path=/; max-age=604800; SameSite=Lax";
-    router.push("/onboarding");
+      const data = await res.json();
+
+      if (!res.ok) {
+        const msg = data.email?.[0] ?? data.password?.[0] ?? data.error ?? "Error al registrarse.";
+        setError(msg);
+        setLoading(false);
+        return;
+      }
+
+      saveTokens(data.tokens.access, data.tokens.refresh);
+      localStorage.setItem("sf_user", JSON.stringify({
+        name:  data.user.username,
+        email: data.user.email,
+        level: null,
+        isNew: true,
+      }));
+      document.cookie = "sf_session=1; path=/; max-age=604800; SameSite=Lax";
+      router.push("/onboarding");
+
+    } catch {
+      setError("No se pudo conectar al servidor.");
+      setLoading(false);
+    }
   }
 
   return (
