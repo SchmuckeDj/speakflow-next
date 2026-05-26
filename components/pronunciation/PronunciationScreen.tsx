@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { recordPronunciationSession } from "@/lib/hooks/useProgress";
 import { useToast } from "@/components/ui/Toast";
+import { apiFetch } from "@/lib/api";
 
 const PRACTICE_WORDS = [
   { word: "through",       phonetic: "/θruː/",              difficulty: "hard"   },
@@ -42,17 +43,11 @@ function calcScore(spoken: string, target: string): number {
         : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     }
   }
-  const dist = dp[m][n];
-  const maxLen = Math.max(m, n);
-  return Math.round(Math.max(0, (1 - dist / maxLen) * 100));
+  return Math.round(Math.max(0, (1 - dp[m][n] / Math.max(m, n)) * 100));
 }
 
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-}
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-}
+interface SpeechRecognitionEvent extends Event { results: SpeechRecognitionResultList; }
+interface SpeechRecognitionErrorEvent extends Event { error: string; }
 
 export default function PronunciationScreen() {
   const [activeIdx, setActiveIdx]   = useState(0);
@@ -62,22 +57,59 @@ export default function PronunciationScreen() {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [noSupport, setNoSupport]   = useState(false);
   const recognitionRef              = useRef<unknown>(null);
+  const audioRef                    = useRef<HTMLAudioElement | null>(null);
   const { showToast }               = useToast();
 
   const word = PRACTICE_WORDS[activeIdx];
 
-  const speak = useCallback(() => {
-    if (!("speechSynthesis" in window)) return;
+  // ── TTS: Google API primero, fallback a Web Speech ──
+  const speak = useCallback(async () => {
+    if (speaking) return;
+    setSpeaking(true);
+
+    // Parar audio anterior
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    window.speechSynthesis?.cancel();
+
+    try {
+      const res = await apiFetch("/api/tts/", {
+        method: "POST",
+        body: JSON.stringify({ text: word.word, voice: "female", speed: 0.8 }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Decodificar base64 y reproducir
+        const binary = atob(data.audio_base64);
+        const bytes  = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob   = new Blob([bytes], { type: "audio/mp3" });
+        const url    = URL.createObjectURL(blob);
+        const audio  = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => { setSpeaking(false); URL.revokeObjectURL(url); };
+        audio.onerror = () => { setSpeaking(false); fallbackSpeak(); };
+        await audio.play();
+        return;
+      }
+    } catch {}
+
+    // Fallback a Web Speech API
+    fallbackSpeak();
+  }, [word.word, speaking]);
+
+  function fallbackSpeak() {
+    if (!("speechSynthesis" in window)) { setSpeaking(false); return; }
     window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(word.word);
+    const utt   = new SpeechSynthesisUtterance(word.word);
     utt.lang    = "en-US";
     utt.rate    = 0.85;
-    utt.onstart = () => setSpeaking(true);
     utt.onend   = () => setSpeaking(false);
     utt.onerror = () => setSpeaking(false);
     window.speechSynthesis.speak(utt);
-  }, [word.word]);
+  }
 
+  // ── SpeechRecognition ──
   function startRecording() {
     const SR =
       (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
@@ -86,14 +118,11 @@ export default function PronunciationScreen() {
 
     if (!SR) {
       setNoSupport(true);
-      showToast("Tu navegador no soporta reconocimiento de voz. Usa Chrome, Brave o Edge.", "error");
+      showToast("Usa Chrome, Brave o Edge para grabar.", "error");
       return;
     }
 
-    setScore(null);
-    setTranscript(null);
-    setRecording(true);
-
+    setScore(null); setTranscript(null); setRecording(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new (SR as any)();
     recognition.lang            = "en-US";
@@ -102,8 +131,7 @@ export default function PronunciationScreen() {
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       const results = e.results[0];
-      let bestScore = 0;
-      let bestTranscript = "";
+      let bestScore = 0, bestTranscript = "";
       for (let i = 0; i < results.length; i++) {
         const t = results[i].transcript;
         const s = calcScore(t, word.word);
@@ -119,9 +147,9 @@ export default function PronunciationScreen() {
 
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       setRecording(false);
-      if (e.error === "no-speech")    showToast("No se detectó voz. Intenta de nuevo.", "info");
+      if (e.error === "no-speech")    showToast("No se detectó voz.", "info");
       else if (e.error === "not-allowed") showToast("Permiso de micrófono denegado.", "error");
-      else if (e.error === "network")  showToast("Error de red. En Brave, verifica que Shields no bloquee el micrófono.", "error");
+      else if (e.error === "network")  showToast("Error de red. Verifica Shields en Brave.", "error");
     };
 
     recognition.onend = () => setRecording(false);
@@ -135,27 +163,21 @@ export default function PronunciationScreen() {
     setRecording(false);
   }
 
-  function toggleRecord() {
-    if (recording) stopRecording();
-    else startRecording();
-  }
-
   function changeWord(idx: number) {
     window.speechSynthesis?.cancel();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (recognitionRef.current as any)?.abort();
-    setSpeaking(false);
-    setRecording(false);
-    setScore(null);
-    setTranscript(null);
+    setSpeaking(false); setRecording(false);
+    setScore(null); setTranscript(null);
     setActiveIdx(idx);
   }
 
   const scoreColor =
-    score === null   ? "" :
-    score >= 90      ? "text-emerald-400" :
-    score >= 70      ? "text-amber-400" :
-                       "text-red-400";
+    score === null ? "" :
+    score >= 90    ? "text-emerald-400" :
+    score >= 70    ? "text-amber-400" :
+                     "text-red-400";
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -211,7 +233,8 @@ export default function PronunciationScreen() {
           ) : "🔊 Escuchar"}
         </Button>
 
-        <Button onClick={toggleRecord} disabled={noSupport} size="md"
+        <Button onClick={() => recording ? stopRecording() : startRecording()}
+          disabled={noSupport} size="md"
           className={recording ? "bg-red-500 hover:brightness-110" : ""}>
           {recording ? (
             <span className="flex items-center gap-2">
@@ -230,7 +253,7 @@ export default function PronunciationScreen() {
       <p className="text-xs text-center text-[var(--color-text-3)]">
         {noSupport
           ? "⚠️ Usa Chrome, Brave o Edge para reconocimiento de voz"
-          : "Presiona Grabar, di la palabra en inglés y espera el resultado"}
+          : "Presiona Escuchar para oír la pronunciación correcta"}
       </p>
 
       <div className="grid grid-cols-3 gap-2">
