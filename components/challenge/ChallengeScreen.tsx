@@ -35,12 +35,12 @@ async function fetchQuestions(): Promise<Question[]> {
 }
 
 export default function ChallengeScreen() {
-  const [questions,  setQuestions]  = useState<Question[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [current,    setCurrent]    = useState(0);
-  const [selected,   setSelected]   = useState<number | null>(null);
-  const [answers,    setAnswers]    = useState<(number | null)[]>([]);
-  const [finished,   setFinished]   = useState(false);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [current,   setCurrent]   = useState(0);
+  const [selected,  setSelected]  = useState<number | null>(null);
+  const [answers,   setAnswers]   = useState<(number | null)[]>([]);
+  const [finished,  setFinished]  = useState(false);
 
   useEffect(() => {
     fetchQuestions().then((qs) => {
@@ -61,22 +61,15 @@ export default function ChallengeScreen() {
       setCurrent((c) => c + 1);
       setSelected(answers[current + 1]);
     } else {
-      const correct    = answers.filter((a, i) => a === questions[i].correct).length;
-      const wrongIdxs  = answers.reduce<number[]>((acc, a, i) => {
-        if (a !== questions[i].correct) acc.push(i);
-        return acc;
-      }, []);
-      recordChallengeCompleted(correct, questions.length, wrongIdxs);
+      const correct = answers.filter((a, i) => a === questions[i].correct).length;
+      recordChallengeCompleted(correct, questions.length);
       setFinished(true);
     }
   }
 
   function restart() {
     setCurrent(0); setSelected(null);
-    setAnswers([]);
-    setFinished(false);
-    setLoading(true);
-    setQuestions([]);
+    setAnswers([]); setFinished(false); setLoading(true); setQuestions([]);
     fetchQuestions().then((qs) => {
       setQuestions(qs);
       setAnswers(Array(qs.length).fill(null));
@@ -104,8 +97,7 @@ export default function ChallengeScreen() {
           {pct >= 0.8 ? "¡Excelente! +200 XP ganados." : pct >= 0.6 ? "Buen intento. +100 XP." : "Sigue practicando. +40 XP."}
         </p>
         <div className="w-full bg-[var(--color-surface-2)] rounded-full h-2">
-          <div className="h-2 rounded-full bg-[var(--color-acc)] transition-all duration-700"
-            style={{ width: `${pct * 100}%` }} />
+          <div className="h-2 rounded-full bg-[var(--color-acc)] transition-all duration-700" style={{ width: `${pct * 100}%` }} />
         </div>
         <Button onClick={restart} size="lg">Nuevo Challenge ↻</Button>
       </div>
@@ -135,7 +127,7 @@ export default function ChallengeScreen() {
               className={clsx(
                 "w-full text-left px-4 py-3 rounded-[var(--radius-md)] border text-sm transition-all",
                 !answered && "border-[var(--color-border)] hover:border-[var(--color-acc)]/50 hover:bg-[var(--color-surface-2)]",
-                answered && idx === q.correct            && "border-emerald-500 bg-emerald-500/10 text-emerald-400",
+                answered && idx === q.correct && "border-emerald-500 bg-emerald-500/10 text-emerald-400",
                 answered && idx === selected && idx !== q.correct && "border-red-500 bg-red-500/10 text-red-400",
                 answered && idx !== selected && idx !== q.correct && "border-[var(--color-border)] opacity-50"
               )}>
