@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Link from "next/link";
-import { getProgress, getWeeklyXP, type ProgressData } from "@/lib/hooks/useProgress";
+import { syncFromAPI, getProgress, getWeeklyXP, type ProgressData } from "@/lib/hooks/useProgress";
 
 const QUICK_ACCESS = [
   { href: "/chat",          icon: "✦", label: "AI Chat",       desc: "Practica conversación" },
@@ -22,6 +22,7 @@ export default function DashboardScreen() {
   const [userLevel, setUserLevel] = useState("B1");
 
   useEffect(() => {
+    // Mostrar datos locales inmediatamente (sin flash)
     setProgress(getProgress());
     setWeekly(getWeeklyXP());
     try {
@@ -29,6 +30,14 @@ export default function DashboardScreen() {
       if (user.name) setUserName(user.name);
       if (user.level) setUserLevel(user.level);
     } catch {}
+
+    // Luego hidratar desde la API (otro dispositivo, sesión nueva, etc.)
+    syncFromAPI().then((remote) => {
+      if (remote) {
+        setProgress(remote);
+        setWeekly(getWeeklyXP());
+      }
+    });
   }, []);
 
   const maxXP = Math.max(...weekly.map((w) => w.xp), 1);
@@ -120,7 +129,6 @@ export default function DashboardScreen() {
               const isToday = i === weekly.length - 1;
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                  {/* Tooltip */}
                   {w.xp > 0 && (
                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded px-1.5 py-0.5 text-[9px] font-mono text-[var(--color-text)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                       {w.xp} XP

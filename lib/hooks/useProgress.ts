@@ -55,6 +55,32 @@ function addXPLocal(data: ProgressData, amount: number): ProgressData {
   return { ...data, xp: data.xp + amount, weeklyActivity };
 }
 
+// ── Hidratar localStorage desde la API (llámalo al montar el dashboard) ──
+export async function syncFromAPI(): Promise<ProgressData | null> {
+  try {
+    const res = await apiFetch("/api/progress/");
+    if (!res.ok) return null;
+    const remote = await res.json();
+
+    // Mapear snake_case → camelCase
+    const merged: ProgressData = {
+      xp:                    remote.xp                    ?? 0,
+      streak:                remote.streak                ?? 0,
+      lastActiveDate:        remote.last_active_date      ?? "",
+      wordsDestroyed:        remote.words_destroyed       ?? 0,
+      chatMessages:          remote.chat_messages         ?? 0,
+      pronunciationSessions: remote.pronunciation_sessions ?? 0,
+      challengesCompleted:   remote.challenges_completed  ?? 0,
+      weeklyActivity:        remote.weekly_activity       ?? {},
+    };
+
+    save(merged);
+    return merged;
+  } catch {
+    return null;
+  }
+}
+
 // ── Sincronizar con la API (fire-and-forget) ──
 async function syncAPI(type: string, value: number, extra?: Record<string, number>) {
   try {
@@ -98,7 +124,7 @@ export function recordPronunciationSession(score: number) {
   syncAPI("pronunciation", score);
 }
 
-export function recordChallengeCompleted(correct: number, total: number) {
+export function recordChallengeCompleted(correct: number, total: number, wrongIdxs: number[] = []) {
   let d    = load();
   d        = updateStreak(d);
   const pct = correct / total;
@@ -106,7 +132,21 @@ export function recordChallengeCompleted(correct: number, total: number) {
   d = addXPLocal(d, xp);
   d.challengesCompleted += 1;
   save(d);
+  // Registrar XP en progress
   syncAPI("challenge", correct, { total });
+  // Guardar historial del challenge
+  saveChallengeResult(correct, total, wrongIdxs);
+}
+
+async function saveChallengeResult(correct: number, total: number, wrongIdxs: number[]) {
+  try {
+    const user  = JSON.parse(localStorage.getItem("sf_user") || "{}");
+    const level = user.level || "B1";
+    await apiFetch("/api/challenge/result/", {
+      method: "POST",
+      body:   JSON.stringify({ level, correct, total, wrong_idxs: wrongIdxs }),
+    });
+  } catch {}
 }
 
 export function getWeeklyXP(): { day: string; xp: number }[] {

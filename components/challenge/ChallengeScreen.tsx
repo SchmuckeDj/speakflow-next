@@ -14,7 +14,6 @@ interface Question {
   explanation: string;
 }
 
-// Fallback si la API no responde
 const FALLBACK_QUESTIONS: Question[] = [
   { question: "Choose the correct past tense: She ___ to the store yesterday", options: ["go","goes","went","gone"], correct: 2, explanation: "Simple past of 'go' is 'went'." },
   { question: "Which sentence is correct", options: ["I have went there","I have gone there","I have go there","I have going there"], correct: 1, explanation: "'Have gone' uses the past participle." },
@@ -22,6 +21,18 @@ const FALLBACK_QUESTIONS: Question[] = [
   { question: "Future commitment: I ___ finish this by tomorrow", options: ["will","would","shall","should"], correct: 0, explanation: "'Will' expresses future commitment." },
   { question: "Correct the error: She don't like coffee", options: ["She doesn't likes coffee","She doesn't like coffee","She not like coffee","She isn't like coffee"], correct: 1, explanation: "Third person singular uses 'doesn't' + base verb." },
 ];
+
+async function fetchQuestions(): Promise<Question[]> {
+  try {
+    const user  = JSON.parse(localStorage.getItem("sf_user") || "{}");
+    const level = user.level || "B1";
+    const res   = await apiFetch(`/api/challenge/?level=${level}`);
+    if (!res.ok) throw new Error();
+    return await res.json();
+  } catch {
+    return FALLBACK_QUESTIONS;
+  }
+}
 
 export default function ChallengeScreen() {
   const [questions,  setQuestions]  = useState<Question[]>([]);
@@ -32,23 +43,11 @@ export default function ChallengeScreen() {
   const [finished,   setFinished]   = useState(false);
 
   useEffect(() => {
-    async function fetchQuestions() {
-      try {
-        const user  = JSON.parse(localStorage.getItem("sf_user") || "{}");
-        const level = user.level || "B1";
-        const res   = await apiFetch(`/api/challenge/?level=${level}`);
-        if (!res.ok) throw new Error();
-        const data: Question[] = await res.json();
-        setQuestions(data);
-        setAnswers(Array(data.length).fill(null));
-      } catch {
-        setQuestions(FALLBACK_QUESTIONS);
-        setAnswers(Array(FALLBACK_QUESTIONS.length).fill(null));
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchQuestions();
+    fetchQuestions().then((qs) => {
+      setQuestions(qs);
+      setAnswers(Array(qs.length).fill(null));
+      setLoading(false);
+    });
   }, []);
 
   function select(idx: number) {
@@ -62,36 +61,27 @@ export default function ChallengeScreen() {
       setCurrent((c) => c + 1);
       setSelected(answers[current + 1]);
     } else {
-      const correct = answers.filter((a, i) => a === questions[i].correct).length;
-      recordChallengeCompleted(correct, questions.length);
+      const correct    = answers.filter((a, i) => a === questions[i].correct).length;
+      const wrongIdxs  = answers.reduce<number[]>((acc, a, i) => {
+        if (a !== questions[i].correct) acc.push(i);
+        return acc;
+      }, []);
+      recordChallengeCompleted(correct, questions.length, wrongIdxs);
       setFinished(true);
     }
   }
 
   function restart() {
     setCurrent(0); setSelected(null);
-    setAnswers(Array(questions.length).fill(null));
+    setAnswers([]);
     setFinished(false);
-    // Volver a pedir preguntas nuevas
     setLoading(true);
     setQuestions([]);
-    async function refetch() {
-      try {
-        const user  = JSON.parse(localStorage.getItem("sf_user") || "{}");
-        const level = user.level || "B1";
-        const res   = await apiFetch(`/api/challenge/?level=${level}`);
-        if (!res.ok) throw new Error();
-        const data: Question[] = await res.json();
-        setQuestions(data);
-        setAnswers(Array(data.length).fill(null));
-      } catch {
-        setQuestions(FALLBACK_QUESTIONS);
-        setAnswers(Array(FALLBACK_QUESTIONS.length).fill(null));
-      } finally {
-        setLoading(false);
-      }
-    }
-    refetch();
+    fetchQuestions().then((qs) => {
+      setQuestions(qs);
+      setAnswers(Array(qs.length).fill(null));
+      setLoading(false);
+    });
   }
 
   if (loading) {
