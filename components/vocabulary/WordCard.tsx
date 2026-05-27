@@ -7,9 +7,10 @@ import type { Word } from "@/lib/types";
 
 interface Props {
   word: Word;
+  aiGenerated?: boolean;
 }
 
-export default function WordCard({ word }: Props) {
+export default function WordCard({ word, aiGenerated }: Props) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -53,16 +54,19 @@ export default function WordCard({ word }: Props) {
   }
 
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-border-2)] transition-colors">
+    <div className={`rounded-[var(--radius-md)] border bg-[var(--color-surface)] p-4 hover:border-[var(--color-border-2)] transition-colors ${
+      aiGenerated ? "border-[var(--color-acc)]/30" : "border-[var(--color-border)]"
+    }`}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="font-semibold text-[var(--color-text)]">{word.word}</span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-semibold text-[var(--color-text)]">{word.word}</span>
+          {aiGenerated && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--color-acc)]/15 text-[var(--color-acc)] font-medium shrink-0">✨ IA</span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={speak}
-            disabled={playing}
-            aria-label="Escuchar pronunciación"
-            className="text-[var(--color-text-3)] hover:text-[var(--color-acc)] transition-colors disabled:opacity-40"
-          >
+          <button onClick={speak} disabled={playing} aria-label="Escuchar pronunciación"
+            className="text-[var(--color-text-3)] hover:text-[var(--color-acc)] transition-colors disabled:opacity-40">
             {playing ? (
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-acc)] opacity-75" />
