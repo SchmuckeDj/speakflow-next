@@ -51,7 +51,6 @@ export default function LoginForm() {
         setError("Google no cargó. Recarga la página e intenta de nuevo.");
         setGLoading(false); return;
       }
-
       const client = window.google!.accounts!.oauth2!.initTokenClient({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         scope: "email profile",
