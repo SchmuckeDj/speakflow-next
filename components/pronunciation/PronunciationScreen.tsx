@@ -1,32 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 import { recordPronunciationSession } from "@/lib/hooks/useProgress";
 import { useToast } from "@/components/ui/Toast";
 import { apiFetch } from "@/lib/api";
-
-const PRACTICE_WORDS = [
-  { word: "through",       phonetic: "/θruː/",              difficulty: "hard"   },
-  { word: "world",         phonetic: "/wɜːrld/",             difficulty: "medium" },
-  { word: "three",         phonetic: "/θriː/",               difficulty: "hard"   },
-  { word: "clothes",       phonetic: "/kloʊðz/",             difficulty: "hard"   },
-  { word: "comfortable",   phonetic: "/ˈkʌmftəbl/",          difficulty: "medium" },
-  { word: "literally",     phonetic: "/ˈlɪtərəli/",          difficulty: "easy"   },
-  { word: "specifically",  phonetic: "/spəˈsɪfɪkli/",        difficulty: "medium" },
-  { word: "Wednesday",     phonetic: "/ˈwɛnzdeɪ/",           difficulty: "hard"   },
-  { word: "pronunciation", phonetic: "/prəˌnʌnsiˈeɪʃən/",   difficulty: "hard"   },
-  { word: "colonel",       phonetic: "/ˈkɜːrnəl/",           difficulty: "hard"   },
-  { word: "February",      phonetic: "/ˈfɛbjuɛri/",          difficulty: "medium" },
-  { word: "entrepreneur",  phonetic: "/ˌɑːntrəprəˈnɜːr/",   difficulty: "hard"   },
-];
-
-const DIFF_STYLE: Record<string, string> = {
-  easy:   "bg-emerald-500/20 text-emerald-400",
-  medium: "bg-amber-500/20 text-amber-400",
-  hard:   "bg-red-500/20 text-red-400",
-};
+import { getWordsForLevel } from "@/lib/data/vocabulary";
+import type { Word } from "@/lib/types";
 
 function calcScore(spoken: string, target: string): number {
   const a = spoken.toLowerCase().trim();
@@ -49,25 +31,44 @@ function calcScore(spoken: string, target: string): number {
 interface SpeechRecognitionEvent extends Event { results: SpeechRecognitionResultList; }
 interface SpeechRecognitionErrorEvent extends Event { error: string; }
 
+const DIFF_COLOR: Record<string, string> = {
+  A1: "text-emerald-400", A2: "text-green-400",
+  B1: "text-blue-400",    B2: "text-violet-400",
+  C1: "text-orange-400",  C2: "text-red-400",
+};
+
 export default function PronunciationScreen() {
+  const [userLevel, setUserLevel]   = useState("B1");
+  const [words, setWords]           = useState<Word[]>([]);
   const [activeIdx, setActiveIdx]   = useState(0);
   const [recording, setRecording]   = useState(false);
   const [speaking, setSpeaking]     = useState(false);
   const [score, setScore]           = useState<number | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [noSupport, setNoSupport]   = useState(false);
-  const recognitionRef              = useRef<unknown>(null);
-  const audioRef                    = useRef<HTMLAudioElement | null>(null);
-  const { showToast }               = useToast();
+  const [showTranslation, setShowTranslation] = useState(false);
+  const recognitionRef = useRef<unknown>(null);
+  const audioRef       = useRef<HTMLAudioElement | null>(null);
+  const { showToast }  = useToast();
 
-  const word = PRACTICE_WORDS[activeIdx];
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("sf_user") || "{}");
+      const level = user.level || "B1";
+      setUserLevel(level);
+      const available = getWordsForLevel(level).filter((w) => w.phonetic);
+      setWords(available);
+    } catch {
+      const available = getWordsForLevel("B1").filter((w) => w.phonetic);
+      setWords(available);
+    }
+  }, []);
 
-  // ── TTS: Google API primero, fallback a Web Speech ──
+  const word = words[activeIdx];
+
   const speak = useCallback(async () => {
-    if (speaking) return;
+    if (!word || speaking) return;
     setSpeaking(true);
-
-    // Parar audio anterior
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     window.speechSynthesis?.cancel();
 
@@ -76,10 +77,8 @@ export default function PronunciationScreen() {
         method: "POST",
         body: JSON.stringify({ text: word.word, voice: "female", speed: 0.8 }),
       });
-
       if (res.ok) {
-        const data = await res.json();
-        // Decodificar base64 y reproducir
+        const data   = await res.json();
         const binary = atob(data.audio_base64);
         const bytes  = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -93,41 +92,29 @@ export default function PronunciationScreen() {
         return;
       }
     } catch {}
-
-    // Fallback a Web Speech API
     fallbackSpeak();
-  }, [word.word, speaking]);
+  }, [word, speaking]);
 
   function fallbackSpeak() {
-    if (!("speechSynthesis" in window)) { setSpeaking(false); return; }
-    window.speechSynthesis.cancel();
-    const utt   = new SpeechSynthesisUtterance(word.word);
-    utt.lang    = "en-US";
-    utt.rate    = 0.85;
-    utt.onend   = () => setSpeaking(false);
-    utt.onerror = () => setSpeaking(false);
+    if (!word || !("speechSynthesis" in window)) { setSpeaking(false); return; }
+    const utt = new SpeechSynthesisUtterance(word.word);
+    utt.lang = "en-US"; utt.rate = 0.85;
+    utt.onend = utt.onerror = () => setSpeaking(false);
     window.speechSynthesis.speak(utt);
   }
 
-  // ── SpeechRecognition ──
   function startRecording() {
     const SR =
       (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
         .SpeechRecognition ??
       (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
 
-    if (!SR) {
-      setNoSupport(true);
-      showToast("Usa Chrome, Brave o Edge para grabar.", "error");
-      return;
-    }
+    if (!SR) { setNoSupport(true); showToast("Usa Chrome, Brave o Edge.", "error"); return; }
 
     setScore(null); setTranscript(null); setRecording(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognition = new (SR as any)();
-    recognition.lang            = "en-US";
-    recognition.interimResults  = false;
-    recognition.maxAlternatives = 3;
+    recognition.lang = "en-US"; recognition.interimResults = false; recognition.maxAlternatives = 3;
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       const results = e.results[0];
@@ -137,9 +124,7 @@ export default function PronunciationScreen() {
         const s = calcScore(t, word.word);
         if (s > bestScore) { bestScore = s; bestTranscript = t; }
       }
-      setTranscript(bestTranscript);
-      setScore(bestScore);
-      setRecording(false);
+      setTranscript(bestTranscript); setScore(bestScore); setRecording(false);
       recordPronunciationSession(bestScore);
       if (bestScore === 100) showToast("¡Pronunciación perfecta! 🎉", "success");
       else if (bestScore >= 80) showToast(`Muy bien — ${bestScore}/100`, "success");
@@ -147,20 +132,13 @@ export default function PronunciationScreen() {
 
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       setRecording(false);
-      if (e.error === "no-speech")    showToast("No se detectó voz.", "info");
+      if (e.error === "no-speech") showToast("No se detectó voz.", "info");
       else if (e.error === "not-allowed") showToast("Permiso de micrófono denegado.", "error");
-      else if (e.error === "network")  showToast("Error de red. Verifica Shields en Brave.", "error");
     };
 
     recognition.onend = () => setRecording(false);
     recognitionRef.current = recognition;
     recognition.start();
-  }
-
-  function stopRecording() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (recognitionRef.current as any)?.stop();
-    setRecording(false);
   }
 
   function changeWord(idx: number) {
@@ -169,31 +147,55 @@ export default function PronunciationScreen() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (recognitionRef.current as any)?.abort();
     setSpeaking(false); setRecording(false);
-    setScore(null); setTranscript(null);
+    setScore(null); setTranscript(null); setShowTranslation(false);
     setActiveIdx(idx);
   }
 
   const scoreColor =
-    score === null ? "" :
-    score >= 90    ? "text-emerald-400" :
-    score >= 70    ? "text-amber-400" :
-                     "text-red-400";
+    score === null ? "" : score >= 90 ? "text-emerald-400" : score >= 70 ? "text-amber-400" : "text-red-400";
+
+  if (!word) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <p className="text-[var(--color-text-2)]">Cargando palabras...</p>
+    </div>
+  );
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">Pronunciación</h1>
-        <p className="text-sm text-[var(--color-text-2)] mt-1">Escucha · Graba · Mejora</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Pronunciación</h1>
+          <p className="text-sm text-[var(--color-text-2)] mt-0.5">
+            {words.length} palabras · Nivel <span className="text-[var(--color-acc)] font-medium">{userLevel}</span>
+          </p>
+        </div>
+        <Badge variant="level">{word.level}</Badge>
       </div>
 
+      {/* Palabra principal */}
       <Card glow className="text-center py-10 space-y-3">
         <p className="text-5xl font-serif font-medium text-[var(--color-text)]">{word.word}</p>
-        <p className="text-[var(--color-acc)] font-mono text-lg">{word.phonetic}</p>
-        <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${DIFF_STYLE[word.difficulty]}`}>
-          {word.difficulty}
-        </span>
+        {word.phonetic && (
+          <p className={`font-mono text-lg ${DIFF_COLOR[word.level] ?? "text-[var(--color-acc)]"}`}>
+            {word.phonetic}
+          </p>
+        )}
+        <p className="text-xs text-[var(--color-text-3)]">{word.category}</p>
+
+        {/* Traducción */}
+        <button onClick={() => setShowTranslation((v) => !v)}
+          className="text-xs text-[var(--color-acc)] hover:underline transition-all">
+          {showTranslation ? "Ocultar traducción" : "Ver traducción"}
+        </button>
+        {showTranslation && (
+          <div className="space-y-1 animate-[fadeIn_0.2s_ease]">
+            <p className="text-base font-medium text-[var(--color-text)]">{word.translation}</p>
+            <p className="text-xs text-[var(--color-text-2)] italic">{word.example}</p>
+          </div>
+        )}
       </Card>
 
+      {/* Resultado */}
       {score !== null && (
         <Card className="text-center py-5 space-y-2">
           <p className={`text-4xl font-bold ${scoreColor}`}>
@@ -218,8 +220,9 @@ export default function PronunciationScreen() {
         </Card>
       )}
 
+      {/* Controles */}
       <div className="flex gap-3 justify-center flex-wrap">
-        <Button variant="ghost" onClick={() => changeWord((activeIdx - 1 + PRACTICE_WORDS.length) % PRACTICE_WORDS.length)}>←</Button>
+        <Button variant="ghost" onClick={() => changeWord((activeIdx - 1 + words.length) % words.length)}>←</Button>
 
         <Button variant="ghost" onClick={speak} disabled={speaking} className="flex items-center gap-2">
           {speaking ? (
@@ -233,7 +236,7 @@ export default function PronunciationScreen() {
           ) : "🔊 Escuchar"}
         </Button>
 
-        <Button onClick={() => recording ? stopRecording() : startRecording()}
+        <Button onClick={() => recording ? (recognitionRef.current as any)?.stop?.() || setRecording(false) : startRecording()}
           disabled={noSupport} size="md"
           className={recording ? "bg-red-500 hover:brightness-110" : ""}>
           {recording ? (
@@ -247,18 +250,17 @@ export default function PronunciationScreen() {
           ) : "🎙 Grabar"}
         </Button>
 
-        <Button variant="ghost" onClick={() => changeWord((activeIdx + 1) % PRACTICE_WORDS.length)}>→</Button>
+        <Button variant="ghost" onClick={() => changeWord((activeIdx + 1) % words.length)}>→</Button>
       </div>
 
       <p className="text-xs text-center text-[var(--color-text-3)]">
-        {noSupport
-          ? "⚠️ Usa Chrome, Brave o Edge para reconocimiento de voz"
-          : "Presiona Escuchar para oír la pronunciación correcta"}
+        {noSupport ? "⚠️ Usa Chrome, Brave o Edge" : "Escucha · Repite · Mejora"}
       </p>
 
+      {/* Grid de palabras */}
       <div className="grid grid-cols-3 gap-2">
-        {PRACTICE_WORDS.map((w, i) => (
-          <button key={w.word} onClick={() => changeWord(i)}
+        {words.map((w, i) => (
+          <button key={w.id} onClick={() => changeWord(i)}
             className={`text-sm py-2 px-3 rounded-[var(--radius-md)] border transition-all ${
               i === activeIdx
                 ? "border-[var(--color-acc)] bg-[var(--color-acc)]/10 text-[var(--color-acc)]"

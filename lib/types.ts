@@ -9,6 +9,7 @@ export interface Word {
   level: CEFRLevel;
   category: string;
   example: string;
+  phonetic?: string;
 }
 
 // ── Verbos ──
@@ -66,7 +67,7 @@ export interface GameWord {
   isBoss?: boolean;
 }
 
-// ── Usuario (futuro: vendrá de la API) ──
+// ── Usuario ──
 export interface UserProfile {
   id: string;
   name: string;
