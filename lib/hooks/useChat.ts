@@ -21,7 +21,6 @@ function loadMessages(scenario: Scenario): ChatMessage[] {
     const raw = localStorage.getItem(STORAGE_KEY(scenario.id));
     if (!raw) return [initMessage(scenario)];
     const parsed = JSON.parse(raw);
-    // Restaurar fechas
     return parsed.map((m: ChatMessage) => ({ ...m, timestamp: new Date(m.timestamp) }));
   } catch {
     return [initMessage(scenario)];
@@ -30,9 +29,7 @@ function loadMessages(scenario: Scenario): ChatMessage[] {
 
 function saveMessages(scenarioId: string, messages: ChatMessage[]) {
   try {
-    // Guardar máximo 50 mensajes para no llenar localStorage
-    const toSave = messages.slice(-50);
-    localStorage.setItem(STORAGE_KEY(scenarioId), JSON.stringify(toSave));
+    localStorage.setItem(STORAGE_KEY(scenarioId), JSON.stringify(messages.slice(-50)));
   } catch {}
 }
 
@@ -40,16 +37,12 @@ export function useChat(scenario: Scenario) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(scenario));
   const [isTyping, setIsTyping] = useState(false);
 
-  // Cargar historial cuando cambia el escenario
   useEffect(() => {
     setMessages(loadMessages(scenario));
   }, [scenario.id]);
 
-  // Persistir en localStorage cuando cambian los mensajes
   useEffect(() => {
-    if (messages.length > 0) {
-      saveMessages(scenario.id, messages);
-    }
+    if (messages.length > 0) saveMessages(scenario.id, messages);
   }, [messages, scenario.id]);
 
   const sendMessage = useCallback(async (text: string) => {
@@ -63,11 +56,15 @@ export function useChat(scenario: Scenario) {
     try {
       const history = [...messages, userMsg]
         .filter((m) => m.id !== "init")
+        .slice(-20) // Máximo 20 mensajes
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const res  = await apiFetch("/api/chat/", {
+      const res = await apiFetch("/api/chat/", {
         method: "POST",
-        body:   JSON.stringify({ messages: history, scenario }),
+        body:   JSON.stringify({
+          messages:    history,
+          scenario_id: scenario.id, // Solo el ID — el backend busca el prompt
+        }),
       });
 
       const data = await res.json();

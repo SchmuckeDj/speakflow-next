@@ -7,13 +7,31 @@ import WordCard from "./WordCard";
 import { apiFetch } from "@/lib/api";
 import clsx from "clsx";
 
+const CACHE_TTL = 60 * 60 * 1000; // 1 hora en ms
+
+function getCachedWords(key: string): Word[] | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { words, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    return words;
+  } catch { return null; }
+}
+
+function setCachedWords(key: string, words: Word[]) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ words, ts: Date.now() }));
+  } catch {}
+}
+
 export default function VocabularyScreen() {
-  const [userLevel, setUserLevel]   = useState("B1");
-  const [userGoals, setUserGoals]   = useState<string[]>([]);
+  const [userLevel, setUserLevel]     = useState("B1");
+  const [userGoals, setUserGoals]     = useState<string[]>([]);
   const [activeLevel, setActiveLevel] = useState<string>("All");
-  const [search, setSearch]         = useState("");
-  const [aiWords, setAiWords]       = useState<Word[]>([]);
-  const [aiLoading, setAiLoading]   = useState(false);
+  const [search, setSearch]           = useState("");
+  const [aiWords, setAiWords]         = useState<Word[]>([]);
+  const [aiLoading, setAiLoading]     = useState(false);
 
   useEffect(() => {
     try {
@@ -23,24 +41,31 @@ export default function VocabularyScreen() {
     } catch {}
   }, []);
 
-  // Cargar palabras de la IA cuando ya tenemos el nivel
   useEffect(() => {
     if (!userLevel) return;
+    const goals   = userGoals.length > 0 ? userGoals.join(",") : "general";
+    const cacheKey = `sf_vocab_ai_${userLevel}_${goals}`;
+
+    // Intentar caché primero
+    const cached = getCachedWords(cacheKey);
+    if (cached) { setAiWords(cached); return; }
+
     setAiLoading(true);
-    const goals = userGoals.length > 0 ? userGoals.join(",") : "general";
     apiFetch(`/api/vocabulary/?level=${userLevel}&goals=${goals}&count=15`)
       .then((res) => res.ok ? res.json() : [])
       .then((data: Word[]) => {
-        // Filtrar duplicados con las palabras base
         const baseWords = new Set(VOCABULARY.map((w) => w.word.toLowerCase()));
-        const unique = data.filter((w) => !baseWords.has(w.word?.toLowerCase()));
-        setAiWords(unique.map((w, i) => ({ ...w, id: `ai-${i}` })));
+        const unique    = data
+          .filter((w) => !baseWords.has(w.word?.toLowerCase()))
+          .map((w, i) => ({ ...w, id: `ai-${i}` }));
+        setAiWords(unique);
+        setCachedWords(cacheKey, unique); // guardar en caché
       })
       .catch(() => {})
       .finally(() => setAiLoading(false));
   }, [userLevel, userGoals]);
 
-  const available     = getWordsForLevel(userLevel);
+  const available      = getWordsForLevel(userLevel);
   const accessibleLvls = CEFR_LEVELS.filter((l) => isLevelUnlocked(l, userLevel));
   const lockedLvls     = CEFR_LEVELS.filter((l) => !isLevelUnlocked(l, userLevel));
 
@@ -81,13 +106,9 @@ export default function VocabularyScreen() {
         </div>
       )}
 
-      {/* Búsqueda + filtros */}
       <div className="flex flex-col gap-3">
-        <input
-          type="text"
-          placeholder="Buscar palabra o traducción..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+        <input type="text" placeholder="Buscar palabra o traducción..."
+          value={search} onChange={(e) => setSearch(e.target.value)}
           className="w-full md:w-72 bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[var(--radius-md)] px-4 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-3)] focus:outline-none focus:border-[var(--color-acc)]"
         />
         <div className="flex gap-2 flex-wrap">
@@ -121,7 +142,6 @@ export default function VocabularyScreen() {
         </div>
       </div>
 
-      {/* Palabras base */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredBase.map((w) => <WordCard key={w.id} word={w} />)}
       </div>
@@ -130,7 +150,6 @@ export default function VocabularyScreen() {
         <p className="text-center text-[var(--color-text-2)] py-8">No se encontraron palabras.</p>
       )}
 
-      {/* Sección palabras IA — solo en "Todas" */}
       {activeLevel === "All" && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
