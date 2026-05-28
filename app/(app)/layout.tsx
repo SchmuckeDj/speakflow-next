@@ -1,5 +1,6 @@
 import Nav from "@/components/layout/Nav";
 import MobileDrawer from "@/components/layout/MobileDrawer";
+import TranslatorWidget from "@/components/ui/TranslatorWidget";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+      <TranslatorWidget />
     </div>
   );
 }
