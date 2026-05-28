@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { apiFetch, saveTokens } from "@/lib/api";
 
+function waitForGoogle(timeout = 5000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.oauth2) { resolve(true); return; }
+    const interval = setInterval(() => {
+      if (window.google?.accounts?.oauth2) { clearInterval(interval); resolve(true); }
+    }, 100);
+    setTimeout(() => { clearInterval(interval); resolve(false); }, timeout);
+  });
+}
+
 export default function RegisterForm() {
   const router = useRouter();
   const [name,     setName]     = useState("");
@@ -41,10 +51,16 @@ export default function RegisterForm() {
   async function handleGoogle() {
     setGLoading(true); setError("");
     try {
-      const client = window.google?.accounts?.oauth2?.initTokenClient({
+      const ready = await waitForGoogle();
+      if (!ready) {
+        setError("Google no cargó. Recarga la página e intenta de nuevo.");
+        setGLoading(false); return;
+      }
+
+      const client = window.google!.accounts!.oauth2!.initTokenClient({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         scope: "email profile",
-        callback: async (response: { access_token?: string; error?: string }) => {
+        callback: async (response) => {
           if (response.error || !response.access_token) {
             setError("Error con Google. Intenta de nuevo."); setGLoading(false); return;
           }
@@ -65,7 +81,7 @@ export default function RegisterForm() {
       });
       client?.requestAccessToken();
     } catch {
-      setError("Google no está disponible."); setGLoading(false);
+      setError("Error iniciando Google. Intenta de nuevo."); setGLoading(false);
     }
   }
 
@@ -82,7 +98,6 @@ export default function RegisterForm() {
 
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-xl)] p-6 space-y-4">
 
-        {/* Google primero — más prominente */}
         <Button variant="ghost" className="w-full" size="md" onClick={handleGoogle} disabled={gLoading}>
           <svg width="16" height="16" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

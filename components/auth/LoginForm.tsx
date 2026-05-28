@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { apiFetch, saveTokens } from "@/lib/api";
 
+function waitForGoogle(timeout = 5000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.oauth2) { resolve(true); return; }
+    const interval = setInterval(() => {
+      if (window.google?.accounts?.oauth2) { clearInterval(interval); resolve(true); }
+    }, 100);
+    setTimeout(() => { clearInterval(interval); resolve(false); }, timeout);
+  });
+}
+
 export default function LoginForm() {
   const router = useRouter();
   const [email,    setEmail]    = useState("");
@@ -36,11 +46,16 @@ export default function LoginForm() {
   async function handleGoogle() {
     setGLoading(true); setError("");
     try {
-      // Usar Google Identity Services (GSI)
-      const client = window.google?.accounts?.oauth2?.initTokenClient({
+      const ready = await waitForGoogle();
+      if (!ready) {
+        setError("Google no cargó. Recarga la página e intenta de nuevo.");
+        setGLoading(false); return;
+      }
+
+      const client = window.google!.accounts!.oauth2!.initTokenClient({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         scope: "email profile",
-        callback: async (response: { access_token?: string; error?: string }) => {
+        callback: async (response) => {
           if (response.error || !response.access_token) {
             setError("Error con Google. Intenta de nuevo."); setGLoading(false); return;
           }
@@ -61,7 +76,7 @@ export default function LoginForm() {
       });
       client?.requestAccessToken();
     } catch {
-      setError("Google no está disponible."); setGLoading(false);
+      setError("Error iniciando Google. Intenta de nuevo."); setGLoading(false);
     }
   }
 
