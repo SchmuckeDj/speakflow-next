@@ -5,33 +5,152 @@ import type { GameWord } from "@/lib/types";
 import { recordWordDestroyed } from "@/lib/hooks/useProgress";
 
 export const LEVELS = [
-  { level: 1,  label: "A1 — Básico",            words: ["I am", "you are", "he is", "she is", "we go", "I see", "I eat", "come here", "sit down", "stand up", "thank you", "good job", "my name", "how are you"],                                                                                          boss: "What is your name",                                                speed: 0.35, spawnEvery: 140 },
-  { level: 2,  label: "A1 — Saludos",            words: ["good morning", "good night", "see you", "how old are you", "I am fine", "nice to meet you", "where are you", "I like it", "help me please", "I don't know"],                                                                                       boss: "Nice to meet you too",                                              speed: 0.42, spawnEvery: 130 },
-  { level: 3,  label: "A2 — Presente",           words: ["she works here", "he plays soccer", "they eat lunch", "I wake up early", "we take the bus", "do you like coffee", "I go to school", "she has a cat"],                                                                                             boss: "Do you speak English every day",                                    speed: 0.40, spawnEvery: 132 },
-  { level: 4,  label: "A2 — Comparaciones",      words: ["she is taller than me", "he runs faster", "it is more expensive", "this is the best", "my bag is bigger", "she is smarter than him"],                                                                                                             boss: "She is much taller than her sister",                                speed: 0.47, spawnEvery: 126 },
-  { level: 5,  label: "B1 — Pasado simple",      words: ["I went to the store", "she didn't come", "we had a meeting", "he forgot his keys", "they finished the work", "I called you yesterday"],                                                                                                           boss: "I didn't understand what he said",                                  speed: 0.54, spawnEvery: 120 },
-  { level: 6,  label: "B1 — Presente perfecto",  words: ["I have finished", "she has never been", "we have just arrived", "have you ever tried", "I haven't seen him", "they have already left"],                                                                                                           boss: "Have you ever traveled to another country",                         speed: 0.61, spawnEvery: 114 },
-  { level: 7,  label: "B2 — Condicionales",      words: ["if I had more time", "I would help you", "she could have done it", "if it rains we stay", "I should have called", "he might be late"],                                                                                                           boss: "If I had known I would have done it differently",                   speed: 0.68, spawnEvery: 108 },
-  { level: 8,  label: "B2 — Vocabulario",        words: ["the deadline is tomorrow", "we need to prioritize", "let's collaborate on this", "the feedback was positive", "please implement the fix", "it's not scalable"],                                                                                   boss: "We need to leverage our resources more efficiently",                speed: 0.75, spawnEvery: 102 },
-  { level: 9,  label: "C1 — Avanzado",           words: ["the implications are nuanced", "ambiguous requirements", "a pragmatic approach", "it remains coherent", "the data is compelling", "she articulated it well"],                                                                                     boss: "The ambiguous phrasing led to a significant misunderstanding",      speed: 0.83, spawnEvery: 96  },
-  { level: 10, label: "C2 — Maestro",            words: ["smartphones are ubiquitous", "an ephemeral experience", "a fundamental dichotomy", "an inextricable connection", "the paradigm has shifted", "a seminal contribution"],                                                                           boss: "The ubiquitous nature of technology creates an inextricable dependency", speed: 0.92, spawnEvery: 88 },
+  {
+    level: 1, label: "A1 — Presente simple",
+    words: [
+      "I am", "you are", "he is", "she is", "we are",
+      "I go", "I eat", "I see", "I have", "I do",
+      "come here", "sit down", "stand up", "thank you", "good job",
+      "my name", "how are you", "I like it", "I don't know",
+    ],
+    boss: "What is your name and where are you from",
+    speed: 0.35, spawnEvery: 140,
+  },
+  {
+    level: 2, label: "A1 — Pasado simple I",
+    words: [
+      "I was", "you were", "he was", "she was", "we were",
+      "I went", "I ate", "I saw", "I had", "I did",
+      "I came", "I sat", "I stood", "I liked", "I knew",
+      "I got", "I said", "I made", "I took",
+    ],
+    boss: "Yesterday I went to school and I ate lunch there",
+    speed: 0.42, spawnEvery: 132,
+  },
+  {
+    level: 3, label: "A2 — Presente continuo",
+    words: [
+      "I am going", "she is eating", "he is working", "we are talking",
+      "they are playing", "I am reading", "he is running", "she is sleeping",
+      "we are waiting", "I am trying", "he is learning", "she is cooking",
+      "they are watching", "I am listening", "he is driving",
+      "she is writing", "we are studying", "I am thinking", "he is coming",
+    ],
+    boss: "She is working hard because she is trying to learn English",
+    speed: 0.47, spawnEvery: 126,
+  },
+  {
+    level: 4, label: "A2 — Pasado continuo",
+    words: [
+      "I was going", "she was eating", "he was working", "we were talking",
+      "they were playing", "I was reading", "he was running", "she was sleeping",
+      "we were waiting", "I was trying", "he was learning", "she was cooking",
+      "they were watching", "I was listening", "he was driving",
+      "she was writing", "we were studying", "I was thinking", "he was coming",
+    ],
+    boss: "She was working when I called her yesterday morning",
+    speed: 0.52, spawnEvery: 120,
+  },
+  {
+    level: 5, label: "B1 — Presente perfecto",
+    words: [
+      "I have gone", "she has eaten", "he has worked", "we have talked",
+      "they have played", "I have read", "he has run", "she has slept",
+      "I have tried", "he has learned", "she has cooked", "I have finished",
+      "she has never been", "we have just arrived", "have you ever tried",
+      "I haven't seen him", "they have already left", "he has always known",
+      "I have done it",
+    ],
+    boss: "Have you ever traveled abroad and worked in another country",
+    speed: 0.57, spawnEvery: 114,
+  },
+  {
+    level: 6, label: "B1 — Pasado perfecto",
+    words: [
+      "I had gone", "she had eaten", "he had worked", "we had talked",
+      "they had played", "I had read", "he had run", "she had slept",
+      "I had tried", "he had learned", "she had cooked", "I had finished",
+      "she had never been", "we had already arrived", "he had just left",
+      "I hadn't seen him", "they had already left", "he had always known",
+      "I had done it",
+    ],
+    boss: "By the time I arrived she had already finished all the work",
+    speed: 0.62, spawnEvery: 108,
+  },
+  {
+    level: 7, label: "B2 — Condicionales",
+    words: [
+      "if I go", "if she had gone", "I would go", "I would have gone",
+      "if he works", "he would work", "if they had known", "we would have told",
+      "if it rains we stay", "I should have called", "he might be late",
+      "she could have done it", "if I had more time", "I would help you",
+      "you should have tried", "they might have left", "if we had known",
+      "I could have done more", "he would have succeeded",
+    ],
+    boss: "If I had studied harder I would have gotten a better job offer",
+    speed: 0.68, spawnEvery: 102,
+  },
+  {
+    level: 8, label: "B2 — Voz pasiva",
+    words: [
+      "it was done", "it has been done", "it had been done", "it will be done",
+      "it is being done", "the report was written", "the email was sent",
+      "the meeting was scheduled", "the project was completed", "it was approved",
+      "the decision was made", "the feedback was given", "the task was assigned",
+      "the issue was resolved", "the data was analyzed",
+      "the plan was implemented", "the results were shared",
+      "the budget was approved", "the deadline was extended",
+    ],
+    boss: "The project had been completed before the deadline was extended by management",
+    speed: 0.74, spawnEvery: 96,
+  },
+  {
+    level: 9, label: "C1 — Frases avanzadas",
+    words: [
+      "the implications are nuanced", "a pragmatic approach", "it remains coherent",
+      "the data is compelling", "she articulated it well", "ambiguous requirements",
+      "a significant milestone", "the perspective shifted", "it warrants attention",
+      "the findings are conclusive", "a comprehensive review", "he elaborated further",
+      "the argument is compelling", "it lacks credibility", "a reliable framework",
+      "the outcome was unprecedented", "she demonstrated professionalism",
+      "the analysis was thorough", "it requires careful consideration",
+    ],
+    boss: "The ambiguous phrasing in the requirements led to a significant misunderstanding among the team",
+    speed: 0.81, spawnEvery: 90,
+  },
+  {
+    level: 10, label: "C2 — Maestro",
+    words: [
+      "smartphones are ubiquitous", "an ephemeral experience", "a fundamental dichotomy",
+      "an inextricable connection", "the paradigm has shifted", "a seminal contribution",
+      "the implications are far-reaching", "a predominantly digital landscape",
+      "the nuances are compelling", "it defies conventional wisdom",
+      "a sophisticated framework", "simultaneously compelling and complex",
+      "the data is predominantly inconclusive", "a profound intellectual debate",
+      "the rhetoric was deliberately ambiguous", "it warrants further investigation",
+      "a comprehensive yet concise analysis", "the findings are nonetheless significant",
+      "it fundamentally challenges existing assumptions",
+    ],
+    boss: "The ubiquitous nature of technology creates an inextricable dependency that fundamentally challenges conventional wisdom",
+    speed: 0.92, spawnEvery: 82,
+  },
 ];
 
 export type WordWithMeta = GameWord & { isBoss?: boolean };
 
 const CANVAS_W = 800;
 const CANVAS_H = 500;
-const WORDS_TO_NEXT_LEVEL = 8;
+export const WORDS_TO_NEXT_LEVEL = 19; // 19 palabras + 1 boss = 20 por nivel
 export const MAX_LIVES = 5;
 
 export function useGame() {
-  const [words, setWords]               = useState<WordWithMeta[]>([]);
-  const [score, setScore]               = useState(0);
-  const [lives, setLives]               = useState(MAX_LIVES);
-  const [running, setRunning]           = useState(false);
-  const [gameOver, setGameOver]         = useState(false);
-  const [currentLevel, setCurrentLevel] = useState(0);
-  const [bossActive, setBossActive]     = useState(false);
+  const [words, setWords]                   = useState<WordWithMeta[]>([]);
+  const [score, setScore]                   = useState(0);
+  const [lives, setLives]                   = useState(MAX_LIVES);
+  const [running, setRunning]               = useState(false);
+  const [gameOver, setGameOver]             = useState(false);
+  const [currentLevel, setCurrentLevel]     = useState(0);
+  const [bossActive, setBossActive]         = useState(false);
   const [wordsDestroyed, setWordsDestroyed] = useState(0);
 
   const rafRef        = useRef<number>(0);
