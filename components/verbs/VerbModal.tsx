@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Verb } from "@/lib/types";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/api";
@@ -10,8 +10,23 @@ interface Props {
   onClose: () => void;
 }
 
+function speakFallback(text: string, onEnd: () => void) {
+  if (!("speechSynthesis" in window)) { onEnd(); return; }
+  window.speechSynthesis.cancel();
+  const utt   = new SpeechSynthesisUtterance(text);
+  utt.lang    = "en-US";
+  utt.rate    = 0.85;
+  utt.onend   = onEnd;
+  utt.onerror = onEnd;
+  window.speechSynthesis.speak(utt);
+}
+
 async function speakWord(text: string, setPlaying: (v: string | null) => void) {
   setPlaying(text);
+
+  // Hablar inmediatamente con Web Speech mientras carga TTS
+  speakFallback(text, () => {});
+
   try {
     const res = await apiFetch("/api/tts/", {
       method: "POST",
@@ -25,24 +40,17 @@ async function speakWord(text: string, setPlaying: (v: string | null) => void) {
       const blob   = new Blob([bytes], { type: "audio/mp3" });
       const url    = URL.createObjectURL(blob);
       const audio  = new Audio(url);
+      // Cancelar el Web Speech y reemplazar con el TTS de Google
+      window.speechSynthesis?.cancel();
       audio.onended = () => { URL.revokeObjectURL(url); setPlaying(null); };
-      audio.onerror = () => { setPlaying(null); fallback(text, setPlaying); };
+      audio.onerror = () => { setPlaying(null); };
       await audio.play();
       return;
     }
   } catch {}
-  fallback(text, setPlaying);
-}
 
-function fallback(text: string, setPlaying: (v: string | null) => void) {
-  if (!("speechSynthesis" in window)) { setPlaying(null); return; }
-  window.speechSynthesis.cancel();
-  const utt  = new SpeechSynthesisUtterance(text);
-  utt.lang   = "en-US";
-  utt.rate   = 0.85;
-  utt.onend  = () => setPlaying(null);
-  utt.onerror = () => setPlaying(null);
-  window.speechSynthesis.speak(utt);
+  // Si TTS falla, el Web Speech ya está hablando — solo terminar el estado
+  setPlaying(null);
 }
 
 interface VerbFormCardProps {
@@ -62,15 +70,17 @@ function VerbFormCard({ label, value, playing, onPlay }: VerbFormCardProps) {
       </div>
       <button
         onClick={() => onPlay(value)}
-        disabled={!!playing}
+        disabled={!!playing && !isPlaying}
         className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110 disabled:opacity-40"
         style={{ background: isPlaying ? "var(--color-acc)" : "rgba(124,106,255,0.15)" }}
         title={`Escuchar "${value}"`}
       >
         {isPlaying ? (
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          <span className="flex gap-0.5 items-end h-3">
+            {[0,1,2].map((i) => (
+              <span key={i} className="w-0.5 bg-white rounded-full animate-bounce"
+                style={{ height: `${6 + i * 2}px`, animationDelay: `${i * 0.1}s` }} />
+            ))}
           </span>
         ) : (
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-acc)" strokeWidth="2.5">
@@ -86,58 +96,55 @@ function VerbFormCard({ label, value, playing, onPlay }: VerbFormCardProps) {
 export default function VerbModal({ verb, onClose }: Props) {
   const [playing, setPlaying] = useState<string | null>(null);
 
+  // Reproducir el infinitivo al abrir — solo una vez
+  useEffect(() => {
+    if (!verb) return;
+    const timer = setTimeout(() => {
+      speakWord(verb.infinitive, setPlaying);
+    }, 200);
+    return () => {
+      clearTimeout(timer);
+      window.speechSynthesis?.cancel();
+      setPlaying(null);
+    };
+  }, [verb?.id]); // solo cuando cambia el verbo
+
   if (!verb) return null;
 
-  function handlePlay(text: string) {
-    speakWord(text, setPlaying);
-  }
-
-  // Al abrir el modal reproducir el infinitivo automáticamente
-  function handleOpen() {
-    setTimeout(() => speakWord(`to ${verb!.infinitive}`, setPlaying), 300);
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}
-      ref={(el) => { if (el) handleOpen(); }}
-    >
-      <div
-        className="bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[var(--radius-xl)] p-6 w-full max-w-sm space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}>
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[var(--radius-xl)] p-6 w-full max-w-sm space-y-4"
+        onClick={(e) => e.stopPropagation()}>
+
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h2 className="text-xl font-semibold">to {verb.infinitive}</h2>
-              <p className="text-sm text-[var(--color-acc)]">{verb.spanish}</p>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold">to {verb.infinitive}</h2>
+            <p className="text-sm text-[var(--color-acc)]">{verb.spanish}</p>
           </div>
           <button onClick={onClose} className="text-[var(--color-text-2)] hover:text-[var(--color-text)] transition-colors text-lg">✕</button>
         </div>
 
-        {/* Formas del verbo con audio */}
+        {/* Formas principales */}
         <div className="grid grid-cols-2 gap-2">
-          <VerbFormCard label="Infinitive"      value={verb.infinitive}             playing={playing} onPlay={handlePlay} />
-          <VerbFormCard label="Past Simple"     value={verb.pastSimple}             playing={playing} onPlay={handlePlay} />
-          <VerbFormCard label="Past Participle" value={verb.pastParticiple}         playing={playing} onPlay={handlePlay} />
-          <VerbFormCard label="Present -ing"    value={verb.forms.presentParticiple} playing={playing} onPlay={handlePlay} />
+          <VerbFormCard label="Infinitive"      value={verb.infinitive}              playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
+          <VerbFormCard label="Past Simple"     value={verb.pastSimple}              playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
+          <VerbFormCard label="Past Participle" value={verb.pastParticiple}          playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
+          <VerbFormCard label="Present -ing"    value={verb.forms.presentParticiple} playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
         </div>
 
-        {/* Formas adicionales */}
+        {/* Presente */}
         <div className="space-y-1.5">
           <p className="text-xs text-[var(--color-text-3)] uppercase tracking-wider">Presente</p>
           <div className="grid grid-cols-2 gap-2">
-            <VerbFormCard label="1ª / 2ª persona" value={verb.forms.present}      playing={playing} onPlay={handlePlay} />
-            <VerbFormCard label="3ª persona"       value={verb.forms.presentThird} playing={playing} onPlay={handlePlay} />
+            <VerbFormCard label="I / You / We"  value={verb.forms.present}      playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
+            <VerbFormCard label="He / She / It" value={verb.forms.presentThird} playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
           </div>
         </div>
 
-        {/* Toca para escuchar hint */}
         <p className="text-xs text-center text-[var(--color-text-3)]">
-          Toca 🔊 en cada forma para escuchar la pronunciación
+          Toca 🔊 en cada forma para escuchar
         </p>
 
         <Button variant="ghost" className="w-full" onClick={onClose}>Cerrar</Button>
