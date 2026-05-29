@@ -7,11 +7,22 @@ import { apiFetch } from "@/lib/api";
 
 const STORAGE_KEY = (scenarioId: string) => `sf_chat_${scenarioId}`;
 
+const SCENARIO_OPENERS: Record<string, string> = {
+  "job-interview":    "Good morning! Please have a seat. I've reviewed your resume and I'm excited to learn more about you. Can you start by telling me a little about yourself?",
+  "remote-work":      "Alright team, let's get started with our standup. Who wants to go first? What did you work on yesterday?",
+  "travel":           "Welcome! How can I help you today?",
+  "gaming":           "Yo, you finally joined! We need one more for the squad. What's your rank?",
+  "customer-service": "I've been on hold for 20 minutes! I need to speak to someone about my order right now.",
+  "casual":           "Hey! Grab a coffee and sit down — it's been a crazy week. How are you holding up?",
+};
+
 function initMessage(scenario: Scenario): ChatMessage {
+  const content = SCENARIO_OPENERS[scenario.id] ??
+    `Ready to practice ${scenario.title}? Let's go!`;
   return {
     id:        "init",
     role:      "assistant",
-    content:   `Hi! I'm your AI coach for the **${scenario.title}** scenario. How can I help you practice today?`,
+    content,
     timestamp: new Date(),
   };
 }
@@ -56,15 +67,12 @@ export function useChat(scenario: Scenario) {
     try {
       const history = [...messages, userMsg]
         .filter((m) => m.id !== "init")
-        .slice(-20) // Máximo 20 mensajes
+        .slice(-20)
         .map((m) => ({ role: m.role, content: m.content }));
 
       const res = await apiFetch("/api/chat/", {
         method: "POST",
-        body:   JSON.stringify({
-          messages:    history,
-          scenario_id: scenario.id, // Solo el ID — el backend busca el prompt
-        }),
+        body:   JSON.stringify({ messages: history, scenario_id: scenario.id }),
       });
 
       const data = await res.json();
