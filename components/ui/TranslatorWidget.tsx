@@ -50,23 +50,23 @@ export default function TranslatorWidget() {
 
   return (
     <>
-      {/* Botón flotante */}
+      {/* Botón flotante — bottom-20 en móvil para no tapar el input */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-11 h-11 md:w-12 md:h-12 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
         style={{ background: "linear-gradient(135deg, var(--color-acc), var(--color-acc-2))", boxShadow: "0 8px 24px rgba(124,106,255,0.4)" }}
         title="Traductor"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
           <path d="M5 8l6 6"/><path d="M4 14s-1-1 1-3 3-1 3-1"/>
           <path d="M2 5h12"/><path d="M7 2h1"/>
           <path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
         </svg>
       </button>
 
-      {/* Panel — fondo blanco/claro */}
+      {/* Panel */}
       {open && (
-        <div className="fixed bottom-20 right-6 z-50 w-80 rounded-[var(--radius-xl)] shadow-2xl overflow-hidden"
+        <div className="fixed bottom-32 right-4 md:bottom-20 md:right-6 z-50 w-72 md:w-80 rounded-[var(--radius-xl)] shadow-2xl overflow-hidden"
           style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
 
           {/* Header */}
@@ -80,8 +80,7 @@ export default function TranslatorWidget() {
               </svg>
               <span className="text-sm font-semibold text-gray-700">Traductor</span>
             </div>
-            <button onClick={() => setOpen(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -91,39 +90,30 @@ export default function TranslatorWidget() {
           {/* Selector idiomas */}
           <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: "1px solid #e2e8f0" }}>
             <select value={from} onChange={(e) => setFrom(e.target.value)}
-              className="flex-1 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="flex-1 text-xs rounded-lg px-2 py-1.5 focus:outline-none"
               style={{ background: "#f8fafc", border: "1px solid #cbd5e1", color: "#374151" }}>
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
-
-            <button onClick={swap}
-              className="p-1.5 rounded-full transition-all hover:scale-110"
+            <button onClick={swap} className="p-1.5 rounded-full transition-all hover:scale-110"
               style={{ background: "#ede9fe", color: "#7c6aff" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
               </svg>
             </button>
-
             <select value={to} onChange={(e) => setTo(e.target.value)}
-              className="flex-1 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="flex-1 text-xs rounded-lg px-2 py-1.5 focus:outline-none"
               style={{ background: "#f8fafc", border: "1px solid #cbd5e1", color: "#374151" }}>
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
           </div>
 
           <div className="p-3 space-y-2">
-            {/* Input */}
-            <textarea
-              value={text}
-              onChange={(e) => handleInput(e.target.value)}
-              placeholder="Escribe para traducir..."
-              rows={3}
-              className="w-full text-sm rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400"
-              style={{ background: "#f8fafc", border: "1px solid #cbd5e1", color: "#1e293b" }}
-            />
+            <textarea value={text} onChange={(e) => handleInput(e.target.value)}
+              placeholder="Escribe para traducir..." rows={3}
+              className="w-full text-sm rounded-lg px-3 py-2 resize-none focus:outline-none"
+              style={{ background: "#f8fafc", border: "1px solid #cbd5e1", color: "#1e293b" }} />
 
-            {/* Resultado */}
-            <div className="min-h-[64px] rounded-lg px-3 py-2 text-sm"
+            <div className="min-h-[56px] rounded-lg px-3 py-2 text-sm"
               style={{
                 background: error ? "#fef2f2" : "#f0fdf4",
                 border: `1px solid ${error ? "#fca5a5" : "#bbf7d0"}`,
@@ -139,22 +129,20 @@ export default function TranslatorWidget() {
               )}
             </div>
 
-            {/* Copiar */}
             {result && !error && (
-              <button
-                onClick={() => navigator.clipboard.writeText(result)}
-                className="text-xs flex items-center gap-1 transition-colors"
-                style={{ color: "#7c6aff" }}>
+              <button onClick={() => navigator.clipboard.writeText(result)}
+                className="text-xs flex items-center gap-1" style={{ color: "#7c6aff" }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
-                Copiar traducción
+                Copiar
               </button>
             )}
           </div>
 
-          <div className="px-4 pb-3 text-[10px] text-center" style={{ color: "#94a3b8" }}>
-            Powered by MyMemory · ES ↔ EN ↔ FR ↔ PT ↔ DE
+          <div className="px-4 pb-2 text-[10px] text-center" style={{ color: "#94a3b8" }}>
+            MyMemory · ES ↔ EN ↔ FR ↔ PT ↔ DE
           </div>
         </div>
       )}
