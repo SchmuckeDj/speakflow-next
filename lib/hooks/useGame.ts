@@ -11,7 +11,7 @@ export const LEVELS = [
       "I am", "you are", "he is", "she is", "we are",
       "I go", "I eat", "I see", "I have", "I do",
       "come here", "sit down", "stand up", "thank you", "good job",
-      "my name", "how are you", "I like it", "I don't know",
+      "my name", "how are you", "I like it", "very good",
     ],
     boss: "What is your name and where are you from",
     speed: 0.35, spawnEvery: 140,
@@ -58,7 +58,7 @@ export const LEVELS = [
       "they have played", "I have read", "he has run", "she has slept",
       "I have tried", "he has learned", "she has cooked", "I have finished",
       "she has never been", "we have just arrived", "have you ever tried",
-      "I haven't seen him", "they have already left", "he has always known",
+      "I have not seen him", "they have already left", "he has always known",
       "I have done it",
     ],
     boss: "Have you ever traveled abroad and worked in another country",
@@ -71,7 +71,7 @@ export const LEVELS = [
       "they had played", "I had read", "he had run", "she had slept",
       "I had tried", "he had learned", "she had cooked", "I had finished",
       "she had never been", "we had already arrived", "he had just left",
-      "I hadn't seen him", "they had already left", "he had always known",
+      "I had not seen him", "they had already left", "he had always known",
       "I had done it",
     ],
     boss: "By the time I arrived she had already finished all the work",
@@ -140,7 +140,7 @@ export type WordWithMeta = GameWord & { isBoss?: boolean };
 
 const CANVAS_W = 800;
 const CANVAS_H = 500;
-export const WORDS_TO_NEXT_LEVEL = 19; // 19 palabras + 1 boss = 20 por nivel
+export const WORDS_TO_NEXT_LEVEL = 19;
 export const MAX_LIVES = 5;
 
 export function useGame() {
