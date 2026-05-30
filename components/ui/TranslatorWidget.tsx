@@ -50,10 +50,10 @@ export default function TranslatorWidget() {
 
   return (
     <>
-      {/* Botón flotante — bottom-20 en móvil para no tapar el input */}
+      {/* Botón flotante — subido más en móvil */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-11 h-11 md:w-12 md:h-12 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+        className="fixed bottom-28 right-4 md:bottom-6 md:right-6 z-50 w-11 h-11 md:w-12 md:h-12 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
         style={{ background: "linear-gradient(135deg, var(--color-acc), var(--color-acc-2))", boxShadow: "0 8px 24px rgba(124,106,255,0.4)" }}
         title="Traductor"
       >
@@ -66,10 +66,9 @@ export default function TranslatorWidget() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-32 right-4 md:bottom-20 md:right-6 z-50 w-72 md:w-80 rounded-[var(--radius-xl)] shadow-2xl overflow-hidden"
+        <div className="fixed bottom-40 right-4 md:bottom-20 md:right-6 z-50 w-72 md:w-80 rounded-[var(--radius-xl)] shadow-2xl overflow-hidden"
           style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}>
 
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3"
             style={{ background: "#f1f5f9", borderBottom: "1px solid #e2e8f0" }}>
             <div className="flex items-center gap-2">
@@ -87,7 +86,6 @@ export default function TranslatorWidget() {
             </button>
           </div>
 
-          {/* Selector idiomas */}
           <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: "1px solid #e2e8f0" }}>
             <select value={from} onChange={(e) => setFrom(e.target.value)}
               className="flex-1 text-xs rounded-lg px-2 py-1.5 focus:outline-none"
