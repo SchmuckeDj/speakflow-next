@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { SCENARIOS } from "@/lib/data/scenarios";
 import { useChat } from "@/lib/hooks/useChat";
 import { useToast } from "@/components/ui/Toast";
@@ -37,18 +37,26 @@ async function speakText(text: string): Promise<void> {
   }
 }
 
+interface SpeechRecognitionEvent extends Event { results: SpeechRecognitionResultList; }
+interface SpeechRecognitionErrorEvent extends Event { error: string; }
+
 export default function ChatScreen() {
   const [selectedScenario, setSelectedScenario] = useState(SCENARIOS[0]);
-  const [input, setInput]         = useState("");
-  const [autoSpeak, setAutoSpeak] = useState(true);
-  const [speaking, setSpeaking]   = useState(false);
+  const [input, setInput]               = useState("");
+  const [autoSpeak, setAutoSpeak]       = useState(true);
+  const [speaking, setSpeaking]         = useState(false);
   const [showScenarios, setShowScenarios] = useState(false);
+  const [recording, setRecording]       = useState(false);
+  const [transcript, setTranscript]     = useState("");
+
   const { messages, isTyping, sendMessage, reset } = useChat(selectedScenario);
   const { limits, refresh: refreshLimits }         = useLimits();
-  const { showXP } = useToast();
-  const bottomRef    = useRef<HTMLDivElement>(null);
-  const inputRef     = useRef<HTMLInputElement>(null);
-  const prevCountRef = useRef(messages.length);
+  const { showXP, showToast }                      = useToast();
+
+  const bottomRef      = useRef<HTMLDivElement>(null);
+  const inputRef       = useRef<HTMLInputElement>(null);
+  const prevCountRef   = useRef(messages.length);
+  const recognitionRef = useRef<unknown>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,12 +73,13 @@ export default function ChatScreen() {
     }
   }, [messages, autoSpeak]);
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || isExhausted) return;
+  async function handleSend(text?: string) {
+    const msg = (text ?? input).trim();
+    if (!msg || isExhausted) return;
     setInput("");
+    setTranscript("");
     inputRef.current?.focus();
-    await sendMessage(text);
+    await sendMessage(msg);
     showXP(5);
     refreshLimits();
   }
@@ -83,34 +92,80 @@ export default function ChatScreen() {
     reset();
   }
 
-  const chatLimit  = limits.chat;
+  // ── Micrófono ──
+  const startRecording = useCallback(() => {
+    const SR =
+      (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
+        .SpeechRecognition ??
+      (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+
+    if (!SR) {
+      showToast("Usa Chrome, Brave o Edge para grabar voz.", "error");
+      return;
+    }
+
+    window.speechSynthesis?.cancel();
+    setRecording(true);
+    setTranscript("");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition = new (SR as any)();
+    recognition.lang            = "en-US";
+    recognition.interimResults  = true;
+    recognition.maxAlternatives = 1;
+    recognition.continuous      = false;
+
+    recognition.onresult = (e: SpeechRecognitionEvent) => {
+      const result = e.results[e.results.length - 1];
+      const text   = result[0].transcript;
+      setTranscript(text);
+      setInput(text);
+      // Si es resultado final enviar automáticamente
+      if (result.isFinal) {
+        setRecording(false);
+        handleSend(text);
+      }
+    };
+
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
+      setRecording(false);
+      if (e.error === "not-allowed") showToast("Permiso de micrófono denegado.", "error");
+      else if (e.error === "no-speech") showToast("No se detectó voz.", "info");
+    };
+
+    recognition.onend = () => setRecording(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [showToast, handleSend]);
+
+  function stopRecording() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (recognitionRef.current as any)?.stop();
+    setRecording(false);
+  }
+
+  const chatLimit   = limits.chat;
   const isExhausted = chatLimit.exhausted;
-  const msgCount   = messages.filter((m) => m.id !== "init").length;
+  const msgCount    = messages.filter((m) => m.id !== "init").length;
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] md:h-[calc(100vh-4rem)]">
 
-      {/* ── Header estilo app de chat ── */}
+      {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]"
         style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0" }}>
-
-        {/* Avatar del escenario */}
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 relative"
-          style={{ background: "linear-gradient(135deg, var(--color-acc)/20, var(--color-acc-2)/20)", border: "1.5px solid var(--color-acc)" }}>
+          style={{ background: "linear-gradient(135deg, rgba(124,106,255,0.2), rgba(124,106,255,0.1))", border: "1.5px solid var(--color-acc)" }}>
           {selectedScenario.icon}
-          {/* Online indicator */}
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2"
             style={{ borderColor: "var(--color-surface)" }} />
         </div>
-
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-[var(--color-text)] truncate">{selectedScenario.title}</p>
+          <p className="font-semibold text-sm truncate">{selectedScenario.title}</p>
           <p className="text-xs text-[var(--color-text-3)] truncate">{selectedScenario.subtitle}</p>
         </div>
-
-        {/* Acciones del header */}
         <div className="flex items-center gap-1 shrink-0">
-          {/* Contador de mensajes restantes */}
           {!limits.is_premium && (
             <span className={`text-xs px-2 py-1 rounded-full font-mono ${
               isExhausted ? "bg-amber-500/20 text-amber-400" :
@@ -120,13 +175,8 @@ export default function ChatScreen() {
               {chatLimit.remaining}/{chatLimit.limit}
             </span>
           )}
-
-          {/* Toggle voz */}
           <button onClick={() => { setAutoSpeak((v) => !v); window.speechSynthesis?.cancel(); setSpeaking(false); }}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-              autoSpeak ? "bg-[var(--color-acc)]/15 text-[var(--color-acc)]" : "text-[var(--color-text-3)]"
-            }`}
-            title={autoSpeak ? "Silenciar" : "Activar voz"}>
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${autoSpeak ? "bg-[var(--color-acc)]/15 text-[var(--color-acc)]" : "text-[var(--color-text-3)]"}`}>
             {speaking ? (
               <span className="flex gap-0.5 items-end h-3">
                 {[0,1,2].map((i) => (
@@ -141,20 +191,14 @@ export default function ChatScreen() {
               </svg>
             )}
           </button>
-
-          {/* Cambiar escenario */}
           <button onClick={() => setShowScenarios((v) => !v)}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--color-text-3)] hover:text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
-            title="Cambiar escenario">
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--color-text-3)] hover:bg-[var(--color-surface-2)] transition-all">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
             </svg>
           </button>
-
-          {/* Limpiar chat */}
           <button onClick={() => { window.speechSynthesis?.cancel(); setSpeaking(false); reset(); }}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--color-text-3)] hover:text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
-            title="Nueva conversación">
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--color-text-3)] hover:bg-[var(--color-surface-2)] transition-all">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
             </svg>
@@ -162,7 +206,7 @@ export default function ChatScreen() {
         </div>
       </div>
 
-      {/* ── Selector de escenarios (dropdown) ── */}
+      {/* Escenarios dropdown */}
       {showScenarios && (
         <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 border-b border-[var(--color-border)] bg-[var(--color-surface-2)]">
           {SCENARIOS.map((s) => (
@@ -182,7 +226,6 @@ export default function ChatScreen() {
         </div>
       )}
 
-      {/* ── Banner límite ── */}
       {isExhausted && (
         <div className="shrink-0 px-4 pt-3">
           <LimitBanner feature="chat" used={chatLimit.used} limit={chatLimit.limit}
@@ -190,23 +233,20 @@ export default function ChatScreen() {
         </div>
       )}
 
-      {/* ── Mensajes ── */}
+      {/* Mensajes */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Mensaje de inicio estilo sistema */}
         <div className="flex justify-center">
           <span className="text-xs text-[var(--color-text-3)] bg-[var(--color-surface-2)] px-3 py-1 rounded-full border border-[var(--color-border)]">
             {selectedScenario.icon} {selectedScenario.title} · {msgCount > 0 ? `${msgCount} mensajes` : "Nueva conversación"}
           </span>
         </div>
-
         {messages.filter((m) => m.id !== "init").map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
-
         {isTyping && (
           <div className="flex gap-2 items-end">
             <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-sm"
-              style={{ background: "linear-gradient(135deg, var(--color-acc)/20, var(--color-acc-2)/20)", border: "1px solid var(--color-acc)/30" }}>
+              style={{ background: "rgba(124,106,255,0.15)", border: "1px solid rgba(124,106,255,0.3)" }}>
               {selectedScenario.icon}
             </div>
             <div className="bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
@@ -220,17 +260,60 @@ export default function ChatScreen() {
         <div ref={bottomRef} />
       </div>
 
-      {/* ── Input ── */}
+      {/* Input con micrófono */}
       <div className="shrink-0 px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-surface)]"
         style={{ borderRadius: "0 0 var(--radius-lg) var(--radius-lg)" }}>
+
+        {/* Indicador de grabación */}
+        {recording && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+            <p className="text-xs text-red-400 font-medium">
+              {transcript ? `"${transcript}"` : "Escuchando... habla en inglés"}
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-2 items-center">
+          {/* Botón micrófono */}
+          <button
+            onClick={recording ? stopRecording : startRecording}
+            disabled={isExhausted}
+            title={recording ? "Detener grabación" : "Hablar en inglés"}
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-40"
+            style={{
+              background: recording
+                ? "linear-gradient(135deg, #ef4444, #dc2626)"
+                : "var(--color-surface-2)",
+              border: recording ? "none" : "1.5px solid var(--color-border-2)",
+            }}>
+            {recording ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="var(--color-text-2)" strokeWidth="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+              </svg>
+            )}
+          </button>
+
           <input
             ref={inputRef}
             type="text" value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder={isExhausted ? "Límite diario alcanzado" : `Message ${selectedScenario.title}...`}
-            disabled={isExhausted}
+            placeholder={
+              isExhausted ? "Límite diario alcanzado" :
+              recording ? "Habla ahora..." :
+              "Escribe o usa el micrófono 🎙"
+            }
+            disabled={isExhausted || recording}
             className="flex-1 rounded-full px-4 py-2.5 text-sm focus:outline-none disabled:opacity-50 transition-all"
             style={{
               background: "var(--color-surface-2)",
@@ -238,8 +321,10 @@ export default function ChatScreen() {
               color: "var(--color-text)",
             }}
           />
-          <button onClick={handleSend}
-            disabled={!input.trim() || isTyping || isExhausted}
+
+          {/* Botón enviar */}
+          <button onClick={() => handleSend()}
+            disabled={!input.trim() || isTyping || isExhausted || recording}
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-40"
             style={{ background: "linear-gradient(135deg, var(--color-acc), var(--color-acc-2))" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
