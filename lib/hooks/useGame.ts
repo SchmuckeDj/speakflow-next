@@ -13,18 +13,18 @@ export const LEVELS = [
       "come here", "sit down", "stand up", "thank you", "good job",
       "my name", "how are you", "I like it", "very good",
     ],
-    boss: "What is your name and where are you from",
+    boss: "What is your name",
     speed: 0.35, spawnEvery: 140,
   },
   {
-    level: 2, label: "A1 — Pasado simple I",
+    level: 2, label: "A1 — Pasado simple",
     words: [
       "I was", "you were", "he was", "she was", "we were",
       "I went", "I ate", "I saw", "I had", "I did",
       "I came", "I sat", "I stood", "I liked", "I knew",
       "I got", "I said", "I made", "I took",
     ],
-    boss: "Yesterday I went to school and I ate lunch there",
+    boss: "I went to school yesterday",
     speed: 0.42, spawnEvery: 132,
   },
   {
@@ -36,7 +36,7 @@ export const LEVELS = [
       "they are watching", "I am listening", "he is driving",
       "she is writing", "we are studying", "I am thinking", "he is coming",
     ],
-    boss: "She is working hard because she is trying to learn English",
+    boss: "She is working hard to learn English",
     speed: 0.47, spawnEvery: 126,
   },
   {
@@ -48,7 +48,7 @@ export const LEVELS = [
       "they were watching", "I was listening", "he was driving",
       "she was writing", "we were studying", "I was thinking", "he was coming",
     ],
-    boss: "She was working when I called her yesterday morning",
+    boss: "She was working when I called her",
     speed: 0.52, spawnEvery: 120,
   },
   {
@@ -61,7 +61,7 @@ export const LEVELS = [
       "I have not seen him", "they have already left", "he has always known",
       "I have done it",
     ],
-    boss: "Have you ever traveled abroad and worked in another country",
+    boss: "Have you ever worked abroad",
     speed: 0.57, spawnEvery: 114,
   },
   {
@@ -74,7 +74,7 @@ export const LEVELS = [
       "I had not seen him", "they had already left", "he had always known",
       "I had done it",
     ],
-    boss: "By the time I arrived she had already finished all the work",
+    boss: "She had finished before I arrived",
     speed: 0.62, spawnEvery: 108,
   },
   {
@@ -87,7 +87,7 @@ export const LEVELS = [
       "you should have tried", "they might have left", "if we had known",
       "I could have done more", "he would have succeeded",
     ],
-    boss: "If I had studied harder I would have gotten a better job offer",
+    boss: "If I had studied I would have passed",
     speed: 0.68, spawnEvery: 102,
   },
   {
@@ -101,7 +101,7 @@ export const LEVELS = [
       "the plan was implemented", "the results were shared",
       "the budget was approved", "the deadline was extended",
     ],
-    boss: "The project had been completed before the deadline was extended by management",
+    boss: "The project had been completed on time",
     speed: 0.74, spawnEvery: 96,
   },
   {
@@ -115,7 +115,7 @@ export const LEVELS = [
       "the outcome was unprecedented", "she demonstrated professionalism",
       "the analysis was thorough", "it requires careful consideration",
     ],
-    boss: "The ambiguous phrasing in the requirements led to a significant misunderstanding among the team",
+    boss: "The ambiguous phrasing caused a misunderstanding",
     speed: 0.81, spawnEvery: 90,
   },
   {
@@ -131,7 +131,7 @@ export const LEVELS = [
       "a comprehensive yet concise analysis", "the findings are nonetheless significant",
       "it fundamentally challenges existing assumptions",
     ],
-    boss: "The ubiquitous nature of technology creates an inextricable dependency that fundamentally challenges conventional wisdom",
+    boss: "Technology creates an inextricable dependency",
     speed: 0.92, spawnEvery: 82,
   },
 ];
