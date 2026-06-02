@@ -117,7 +117,7 @@ export default function RegisterForm() {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs text-[var(--color-text-2)] font-medium">Nombre</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Anabel"
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre"
               className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border-2)] rounded-[var(--radius-md)] px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--color-acc)] transition-colors" />
           </div>
           <div className="space-y-1.5">
