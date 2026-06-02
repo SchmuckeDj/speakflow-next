@@ -15,40 +15,41 @@ const QUICK_ACCESS = [
   { href: "/game",          icon: "◈", label: "Word Attack",   desc: "Juego de velocidad" },
 ];
 
-// Sistema de niveles — XP necesario para cada nivel
-const LEVELS = [
-  { level: 1,  label: "Principiante",  xpRequired: 0     },
-  { level: 2,  label: "Aprendiz",      xpRequired: 500   },
-  { level: 3,  label: "Estudiante",    xpRequired: 1500  },
-  { level: 4,  label: "Practicante",   xpRequired: 3000  },
-  { level: 5,  label: "Intermedio",    xpRequired: 6000  },
-  { level: 6,  label: "Avanzado",      xpRequired: 10000 },
-  { level: 7,  label: "Experto",       xpRequired: 15000 },
-  { level: 8,  label: "Maestro",       xpRequired: 25000 },
-  { level: 9,  label: "Leyenda",       xpRequired: 40000 },
-  { level: 10, label: "Nativo",        xpRequired: 60000 },
+const XP_LEVELS = [
+  { level: 1,  label: "Novato",      xp: 0     },
+  { level: 2,  label: "Explorador",  xp: 500   },
+  { level: 3,  label: "Estudiante",  xp: 1500  },
+  { level: 4,  label: "Practicante", xp: 3000  },
+  { level: 5,  label: "Dedicado",    xp: 6000  },
+  { level: 6,  label: "Experto",     xp: 10000 },
+  { level: 7,  label: "Maestro",     xp: 15000 },
+  { level: 8,  label: "Leyenda",     xp: 25000 },
+  { level: 9,  label: "Élite",       xp: 40000 },
+  { level: 10, label: "Nativo",      xp: 60000 },
 ];
 
 function getLevelInfo(xp: number) {
-  let current = LEVELS[0];
-  let next    = LEVELS[1];
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= LEVELS[i].xpRequired) {
-      current = LEVELS[i];
-      next    = LEVELS[i + 1] ?? null;
+  let current = XP_LEVELS[0];
+  let next: typeof XP_LEVELS[0] | null = XP_LEVELS[1];
+  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= XP_LEVELS[i].xp) {
+      current = XP_LEVELS[i];
+      next    = XP_LEVELS[i + 1] ?? null;
       break;
     }
   }
-  const xpInLevel  = xp - current.xpRequired;
-  const xpForNext  = next ? next.xpRequired - current.xpRequired : 1;
-  const pct        = next ? Math.min((xpInLevel / xpForNext) * 100, 100) : 100;
+  const xpInLevel = xp - current.xp;
+  const xpForNext = next ? next.xp - current.xp : 1;
+  const pct       = next ? Math.min((xpInLevel / xpForNext) * 100, 100) : 100;
   return { current, next, xpInLevel, xpForNext, pct };
 }
 
+const BAR_HEIGHT = 96; // px disponibles para las barras
+
 export default function DashboardScreen() {
-  const [progress, setProgress] = useState<ProgressData | null>(null);
-  const [weekly, setWeekly]     = useState<{ day: string; xp: number }[]>([]);
-  const [userName, setUserName] = useState("Anabel");
+  const [progress, setProgress]   = useState<ProgressData | null>(null);
+  const [weekly, setWeekly]       = useState<{ day: string; xp: number }[]>([]);
+  const [userName, setUserName]   = useState("Anabel");
   const [userLevel, setUserLevel] = useState("B1");
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function DashboardScreen() {
               <span className="text-sm font-medium text-[var(--color-text)]">{levelInfo.current.label}</span>
             </div>
             {levelInfo.next && (
-              <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-3)]">
+              <div className="flex items-center gap-1 text-xs text-[var(--color-text-3)]">
                 <span>{levelInfo.xpInLevel.toLocaleString()}</span>
                 <span>/</span>
                 <span>{levelInfo.xpForNext.toLocaleString()} XP</span>
@@ -109,24 +110,14 @@ export default function DashboardScreen() {
               </div>
             )}
           </div>
-
-          {/* Barra de progreso de nivel */}
-          <div className="relative h-3 bg-[var(--color-surface-2)] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
+          <div className="relative h-3 rounded-full overflow-hidden" style={{ background: "var(--color-surface-2)" }}>
+            <div className="h-full rounded-full transition-all duration-700"
               style={{
                 width: `${levelInfo.pct}%`,
                 background: "linear-gradient(90deg, var(--color-acc), var(--color-acc-2))",
                 boxShadow: "0 0 8px rgba(124,106,255,0.5)",
-              }}
-            />
-            {/* Brillo animado */}
-            <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
-              <div className="absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                style={{ transform: `translateX(${levelInfo.pct * 2}%)`, transition: "transform 0.7s ease" }} />
-            </div>
+              }} />
           </div>
-
           {levelInfo.next ? (
             <p className="text-xs text-[var(--color-text-3)]">
               Faltan <span className="text-[var(--color-acc)] font-medium">
@@ -144,7 +135,7 @@ export default function DashboardScreen() {
         {STATS.map((s) => (
           <Card key={s.label} className="flex flex-col gap-1">
             <span className="text-xl">{s.icon}</span>
-            <span className="text-xl font-semibold text-[var(--color-text)]">{s.value}</span>
+            <span className="text-xl font-semibold">{s.value}</span>
             <span className="text-xs text-[var(--color-text-2)]">{s.label}</span>
           </Card>
         ))}
@@ -184,31 +175,24 @@ export default function DashboardScreen() {
             <Link href="/game" className="text-xs text-[var(--color-acc)] hover:underline mt-1">Ir a Word Attack →</Link>
           </div>
         ) : (
-          <div className="flex items-end gap-2 h-32">
+          /* Usamos height fijo en px para evitar problemas con flexbox y porcentajes */
+          <div className="flex gap-2 items-end" style={{ height: "120px" }}>
             {weekly.map((w, i) => {
-              const isToday = i === weekly.length - 1;
-              // Altura mínima visible de 6px para días con algo de XP, 3px para días vacíos
-              const heightPct = w.xp > 0 ? Math.max((w.xp / maxXP) * 100, 10) : 3;
+              const isToday   = i === weekly.length - 1;
+              const barPx     = w.xp > 0 ? Math.max((w.xp / maxXP) * BAR_HEIGHT, 8) : 3;
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group relative">
-                  {w.xp > 0 && (
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded px-1.5 py-0.5 text-[9px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      {w.xp.toLocaleString()} XP
-                    </div>
-                  )}
-                  <div className="w-full flex-1 flex items-end">
-                    <div className="w-full rounded-t-sm transition-all duration-700"
-                      style={{
-                        height: `${heightPct}%`,
-                        background: isToday
-                          ? "linear-gradient(180deg, var(--color-acc), var(--color-acc-2))"
-                          : w.xp > 0
-                            ? "rgba(124,106,255,0.45)"
-                            : "rgba(255,255,255,0.04)",
-                        boxShadow: isToday && w.xp > 0 ? "0 0 8px rgba(124,106,255,0.4)" : "none",
-                      }}
-                    />
-                  </div>
+                <div key={i} className="flex-1 flex flex-col items-center gap-1" style={{ height: "120px", justifyContent: "flex-end" }}>
+                  <div title={w.xp > 0 ? `${w.xp.toLocaleString()} XP` : ""}
+                    className="w-full rounded-t-sm transition-all duration-700 cursor-default"
+                    style={{
+                      height: `${barPx}px`,
+                      background: isToday
+                        ? "linear-gradient(180deg, var(--color-acc), var(--color-acc-2))"
+                        : w.xp > 0
+                          ? "rgba(124,106,255,0.5)"
+                          : "rgba(255,255,255,0.06)",
+                      boxShadow: isToday && w.xp > 0 ? "0 0 8px rgba(124,106,255,0.5)" : "none",
+                    }} />
                   <span className={`text-[10px] ${isToday ? "text-[var(--color-acc)] font-medium" : "text-[var(--color-text-3)]"}`}>
                     {w.day}
                   </span>
