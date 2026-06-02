@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { clearTokens } from "@/lib/api";
+
+const XP_TO_UNLOCK: Record<string, number> = {
+  A1: 3000, A2: 6000, B1: 10000, B2: 15000, C1: 25000,
+};
 
 const NAV_ITEMS = [
   { href: "/dashboard",     label: "Dashboard",     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
@@ -18,9 +22,21 @@ const NAV_ITEMS = [
 ];
 
 export default function MobileDrawer() {
-  const [open, setOpen] = useState(false);
-  const pathname        = usePathname();
-  const router          = useRouter();
+  const [open, setOpen]           = useState(false);
+  const [examReady, setExamReady] = useState(false);
+  const pathname                  = usePathname();
+  const router                    = useRouter();
+
+  useEffect(() => {
+    try {
+      const user   = JSON.parse(localStorage.getItem("sf_user") || "{}");
+      const prog   = JSON.parse(localStorage.getItem("sf_progress") || "{}");
+      const lvl    = user.level || "A1";
+      const xp     = prog.xp || 0;
+      const needed = XP_TO_UNLOCK[lvl] ?? 99999;
+      setExamReady(xp >= needed && lvl !== "C2");
+    } catch {}
+  }, [pathname]);
 
   async function handleLogout() {
     setOpen(false);
@@ -35,11 +51,19 @@ export default function MobileDrawer() {
           <span className="w-2 h-2 rounded-full bg-[var(--color-acc)] shadow-[0_0_8px_var(--color-acc)]" />
           <span className="font-semibold text-sm">SpeakFlow</span>
         </Link>
-        <button onClick={() => setOpen(true)} className="p-2 text-[var(--color-text-2)]" aria-label="Abrir menú">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 12h18M3 6h18M3 18h18"/>
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Badge de examen listo en el header móvil */}
+          {examReady && (
+            <Link href="/next-level" className="text-xs px-2 py-1 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 font-medium animate-pulse">
+              🎓 Examen
+            </Link>
+          )}
+          <button onClick={() => setOpen(true)} className="p-2 text-[var(--color-text-2)]" aria-label="Abrir menú">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12h18M3 6h18M3 18h18"/>
+            </svg>
+          </button>
+        </div>
       </header>
 
       {open && <div className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />}
@@ -76,6 +100,20 @@ export default function MobileDrawer() {
               </Link>
             );
           })}
+
+          {/* Examen de nivel */}
+          {examReady && (
+            <Link href="/next-level" onClick={() => setOpen(false)}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] text-sm transition-all mt-1 border",
+                pathname === "/next-level"
+                  ? "bg-amber-500/20 text-amber-400 border-amber-500/40 font-medium"
+                  : "border-amber-500/30 text-amber-400 hover:bg-amber-500/10 animate-pulse"
+              )}>
+              <span className="shrink-0">🎓</span>
+              Subir de nivel
+            </Link>
+          )}
         </div>
 
         <div className="px-2 pt-4 border-t border-[var(--color-border)] space-y-3">
