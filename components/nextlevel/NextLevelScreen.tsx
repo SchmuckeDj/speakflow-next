@@ -173,7 +173,6 @@ export default function NextLevelScreen() {
         style={{ background: "linear-gradient(135deg, var(--color-acc), var(--color-acc-2))", boxShadow: "0 8px 24px rgba(124,106,255,0.4)" }}>
         Comenzar examen →
       </button>
-      <button onClick={() => router.push("/dashboard")} className="text-sm text-[var(--color-text-3)] hover:text-[var(--color-text)]">← Volver</button>
     </div>
   );
 
