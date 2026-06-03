@@ -39,14 +39,39 @@
   --color-border:    rgba(30,41,59,0.12);
   --color-border-2:  rgba(30,41,59,0.20);
 
-  --color-acc:   #1D4ED8;   /* azul oscuro AAA contrast */
-  --color-acc-2: #0F766E;   /* teal oscuro AAA contrast */
-  --color-acc-3: #B91C1C;   /* rojo oscuro */
+  --color-acc:   #1D4ED8;
+  --color-acc-2: #0F766E;
+  --color-acc-3: #B91C1C;
 
-  --color-text:   #0F172A;  /* casi negro */
-  --color-text-2: #334155;  /* gris oscuro */
-  --color-text-3: #64748B;  /* gris medio — mínimo 4.5:1 sobre blanco */
+  --color-text:   #0F172A;
+  --color-text-2: #1E293B;  /* más oscuro */
+  --color-text-3: #475569;  /* más oscuro — ratio ~5.9:1 sobre blanco */
 }
+
+/* ── Modo claro: oscurecer spans con colores Tailwind hardcoded ── */
+:root.light .text-amber-400  { color: #78350F !important; }
+:root.light .text-amber-300  { color: #78350F !important; }
+:root.light .text-yellow-400 { color: #713F12 !important; }
+:root.light .text-emerald-400 { color: #064E3B !important; }
+:root.light .text-emerald-300 { color: #064E3B !important; }
+:root.light .text-green-400  { color: #14532D !important; }
+:root.light .text-red-400    { color: #7F1D1D !important; }
+:root.light .text-red-300    { color: #7F1D1D !important; }
+:root.light .text-blue-400   { color: #1E3A8A !important; }
+:root.light .text-violet-400 { color: #3730A3 !important; }
+:root.light .text-purple-400 { color: #3730A3 !important; }
+:root.light .text-orange-400 { color: #7C2D12 !important; }
+:root.light .text-cyan-400   { color: #0E7490 !important; }
+:root.light .text-teal-400   { color: #134E4A !important; }
+:root.light .text-gray-400   { color: #374151 !important; }
+:root.light .text-slate-400  { color: #334155 !important; }
+
+/* Fondos de colores en modo claro — más suaves */
+:root.light .bg-amber-500\/10  { background-color: #FEF3C7 !important; }
+:root.light .bg-amber-500\/20  { background-color: #FDE68A !important; }
+:root.light .bg-emerald-500\/10 { background-color: #D1FAE5 !important; }
+:root.light .bg-red-500\/10    { background-color: #FEE2E2 !important; }
+:root.light .bg-blue-500\/15   { background-color: #DBEAFE !important; }
 
 /* ── Reset base ── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -63,18 +88,6 @@ body {
   min-height: 100dvh;
   transition: background 0.25s ease, color 0.25s ease;
 }
-
-/* ── Modo claro: corregir elementos con colores hardcoded ── */
-:root.light .text-amber-400 { color: #92400E !important; }
-:root.light .border-amber-500\/30 { border-color: rgba(146,64,14,0.4) !important; }
-:root.light .bg-amber-500\/10 { background-color: rgba(146,64,14,0.08) !important; }
-:root.light .text-emerald-400 { color: #065F46 !important; }
-:root.light .bg-emerald-500\/10 { background-color: #D1FAE5 !important; }
-:root.light .text-red-400 { color: #991B1B !important; }
-:root.light .bg-red-500\/10 { background-color: #FEE2E2 !important; }
-:root.light .text-blue-400 { color: #1E40AF !important; }
-:root.light .text-orange-400 { color: #92400E !important; }
-:root.light .text-white { color: #FFFFFF !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
