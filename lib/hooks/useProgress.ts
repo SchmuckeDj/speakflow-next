@@ -55,7 +55,6 @@ function addXPLocal(data: ProgressData, amount: number): ProgressData {
   return { ...data, xp: data.xp + amount, weeklyActivity };
 }
 
-// ── Sincronizar con la API (fire-and-forget) ──
 async function syncAPI(type: string, value: number, extra?: Record<string, number>) {
   try {
     await apiFetch("/api/progress/record/", {
@@ -65,14 +64,11 @@ async function syncAPI(type: string, value: number, extra?: Record<string, numbe
   } catch {}
 }
 
-// ── Sincronizar DESDE la API al cargar dashboard ──
 export async function syncFromAPI(): Promise<ProgressData | null> {
   try {
     const res = await apiFetch("/api/progress/");
     if (!res.ok) return null;
     const data = await res.json();
-
-    // Convertir formato snake_case del backend a camelCase del frontend
     const remote: ProgressData = {
       xp:                    data.xp ?? 0,
       streak:                data.streak ?? 0,
@@ -83,8 +79,6 @@ export async function syncFromAPI(): Promise<ProgressData | null> {
       challengesCompleted:   data.challenges_completed ?? 0,
       weeklyActivity:        data.weekly_activity ?? {},
     };
-
-    // Guardar en localStorage para acceso offline
     save(remote);
     return remote;
   } catch {
@@ -92,58 +86,41 @@ export async function syncFromAPI(): Promise<ProgressData | null> {
   }
 }
 
-// ── API pública ──────────────────────────────
-
-export function getProgress(): ProgressData {
-  return load();
-}
+export function getProgress(): ProgressData { return load(); }
 
 export function recordWordDestroyed(count = 1) {
-  let d = load();
-  d = updateStreak(d);
-  d = addXPLocal(d, count * 10);
-  d.wordsDestroyed += count;
-  save(d);
-  syncAPI("word", count);
+  let d = load(); d = updateStreak(d); d = addXPLocal(d, count * 10);
+  d.wordsDestroyed += count; save(d); syncAPI("word", count);
 }
 
 export function recordChatMessage() {
-  let d = load();
-  d = updateStreak(d);
-  d = addXPLocal(d, 5);
-  d.chatMessages += 1;
-  save(d);
-  syncAPI("chat", 1);
+  let d = load(); d = updateStreak(d); d = addXPLocal(d, 5);
+  d.chatMessages += 1; save(d); syncAPI("chat", 1);
 }
 
 export function recordPronunciationSession(score: number) {
-  let d = load();
-  d = updateStreak(d);
-  d = addXPLocal(d, Math.round(score * 0.5));
-  d.pronunciationSessions += 1;
-  save(d);
-  syncAPI("pronunciation", score);
+  let d = load(); d = updateStreak(d); d = addXPLocal(d, Math.round(score * 0.5));
+  d.pronunciationSessions += 1; save(d); syncAPI("pronunciation", score);
 }
 
 export function recordChallengeCompleted(correct: number, total: number) {
-  let d     = load();
-  d         = updateStreak(d);
+  let d     = load(); d = updateStreak(d);
   const pct = correct / total;
   const xp  = pct >= 0.8 ? 200 : pct >= 0.6 ? 100 : 40;
-  d = addXPLocal(d, xp);
-  d.challengesCompleted += 1;
-  save(d);
+  d = addXPLocal(d, xp); d.challengesCompleted += 1; save(d);
   syncAPI("challenge", correct, { total });
 }
 
 export function getWeeklyXP(): { day: string; xp: number }[] {
-  const d      = load();
+  const d    = load();
   const result = [];
+  // Do Lu Ma Mi Ju Vi Sa — nombres cortos en español
+  const DAYS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
   for (let i = 6; i >= 0; i--) {
     const date  = new Date();
     date.setDate(date.getDate() - i);
     const key   = date.toISOString().slice(0, 10);
-    const label = ["D", "L", "M", "X", "J", "V", "S"][date.getDay()];
+    const label = DAYS[date.getDay()];
     result.push({ day: label, xp: d.weeklyActivity[key] ?? 0 });
   }
   return result;
