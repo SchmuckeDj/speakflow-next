@@ -10,7 +10,7 @@
   --radius-lg: 20px;
   --radius-xl: 32px;
 
-  --shadow-card: 0 4px 24px rgba(0,0,0,0.1);
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.08);
   --shadow-glow: 0 0 32px rgba(59,130,246,0.2);
 }
 
@@ -35,26 +35,23 @@
 :root.light {
   --color-bg:        #F8FAFC;
   --color-surface:   #FFFFFF;
-  --color-surface-2: #F1F5F9;
-  --color-border:    rgba(30,41,59,0.10);
-  --color-border-2:  rgba(30,41,59,0.18);
+  --color-surface-2: #EFF6FF;
+  --color-border:    rgba(30,41,59,0.12);
+  --color-border-2:  rgba(30,41,59,0.20);
 
-  --color-acc:   #3B82F6;   /* azul */
-  --color-acc-2: #14B8A6;   /* turquesa */
-  --color-acc-3: #EF4444;   /* rojo error */
+  --color-acc:   #2563EB;   /* azul más oscuro para mejor contraste */
+  --color-acc-2: #0D9488;   /* turquesa más oscuro */
+  --color-acc-3: #DC2626;   /* rojo error */
 
-  --color-text:   #1E293B;
-  --color-text-2: #64748B;
-  --color-text-3: #94A3B8;
+  --color-text:   #0F172A;   /* casi negro para máximo contraste */
+  --color-text-2: #475569;   /* gris medio */
+  --color-text-3: #94A3B8;   /* gris claro */
 }
 
 /* ── Reset base ── */
 *, *::before, *::after { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
 body {
   background: var(--color-bg);
@@ -64,22 +61,19 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background 0.25s ease, color 0.25s ease;
 }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-surface); }
-::-webkit-scrollbar-thumb { background: var(--color-surface-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--color-border-2); border-radius: 3px; }
 
 /* ── Selección ── */
-::selection { background: rgba(59,130,246,0.25); }
+::selection { background: rgba(37,99,235,0.2); color: var(--color-text); }
 
 /* ── Focus visible ── */
-:focus-visible {
-  outline: 2px solid var(--color-acc);
-  outline-offset: 2px;
-}
+:focus-visible { outline: 2px solid var(--color-acc); outline-offset: 2px; }
 
 /* ── Fuentes ── */
 @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");

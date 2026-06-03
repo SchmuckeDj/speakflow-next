@@ -10,19 +10,10 @@ export const metadata: Metadata = {
     default: "SpeakFlow — Aprende inglés con IA | A1 hasta C2",
     template: "%s | SpeakFlow",
   },
-  description:
-    "Aprende inglés hablando con inteligencia artificial. Practica conversaciones reales, entrena tu pronunciación y sube de nivel A1 a C2. Gratis, sin vergüenza.",
-  keywords: [
-    "aprender inglés con IA", "aprender inglés online gratis",
-    "practicar inglés conversación", "app inglés hispanohablantes",
-    "inglés para trabajo remoto", "pronunciación inglés",
-    "verbos irregulares inglés", "nivel CEFR inglés", "speakflow",
-  ],
+  description: "Aprende inglés hablando con inteligencia artificial. Practica conversaciones reales, entrena tu pronunciación y sube de nivel A1 a C2. Gratis, sin vergüenza.",
+  keywords: ["aprender inglés con IA", "aprender inglés online gratis", "practicar inglés conversación", "app inglés hispanohablantes", "inglés para trabajo remoto", "verbos irregulares inglés", "nivel CEFR inglés", "speakflow"],
   authors: [{ name: "SpeakFlow", url: BASE_URL }],
-  creator: "SpeakFlow",
-  publisher: "SpeakFlow",
-  category: "education",
-  applicationName: "SpeakFlow",
+  creator: "SpeakFlow", publisher: "SpeakFlow", category: "education", applicationName: "SpeakFlow",
   alternates: { canonical: BASE_URL, languages: { "es": BASE_URL } },
   openGraph: {
     type: "website", locale: "es_DO", url: BASE_URL, siteName: "SpeakFlow",
@@ -30,36 +21,29 @@ export const metadata: Metadata = {
     description: "Conversaciones reales con IA, corrección instantánea, pronunciación y juegos.",
     images: [{ url: `${BASE_URL}/og-image.png`, width: 1200, height: 630, alt: "SpeakFlow" }],
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "SpeakFlow — Aprende inglés con IA",
-    description: "Practica inglés real con IA. Gratis.",
-    images: [`${BASE_URL}/og-image.png`],
-  },
-  robots: {
-    index: true, follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
-  },
+  twitter: { card: "summary_large_image", title: "SpeakFlow — Aprende inglés con IA", description: "Practica inglés real con IA. Gratis.", images: [`${BASE_URL}/og-image.png`] },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
+    icon: [{ url: "/favicon.ico" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }, { url: "/icon-512.png", sizes: "512x512", type: "image/png" }],
     apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
   },
   manifest: "/manifest.json",
-  verification: { google: "REEMPLAZAR_CON_GOOGLE_SEARCH_CONSOLE_CODE" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
-        {/* Google Identity Services */}
+        {/* Aplicar tema antes de renderizar para evitar flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            const t = localStorage.getItem('sf_theme');
+            if (t === 'light') document.documentElement.classList.add('light');
+          } catch(e) {}
+        `}} />
         <script src="https://accounts.google.com/gsi/client" async defer />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
