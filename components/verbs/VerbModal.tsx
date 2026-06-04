@@ -10,22 +10,9 @@ interface Props {
   onClose: () => void;
 }
 
-function speakFallback(text: string, onEnd: () => void) {
-  if (!("speechSynthesis" in window)) { onEnd(); return; }
-  window.speechSynthesis.cancel();
-  const utt   = new SpeechSynthesisUtterance(text);
-  utt.lang    = "en-US";
-  utt.rate    = 0.85;
-  utt.onend   = onEnd;
-  utt.onerror = onEnd;
-  window.speechSynthesis.speak(utt);
-}
-
 async function speakWord(text: string, setPlaying: (v: string | null) => void) {
   setPlaying(text);
-
-  // Hablar inmediatamente con Web Speech mientras carga TTS
-  speakFallback(text, () => {});
+  window.speechSynthesis?.cancel(); // cancelar cualquier voz previa
 
   try {
     const res = await apiFetch("/api/tts/", {
@@ -37,20 +24,29 @@ async function speakWord(text: string, setPlaying: (v: string | null) => void) {
       const binary = atob(data.audio_base64);
       const bytes  = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob   = new Blob([bytes], { type: "audio/mp3" });
-      const url    = URL.createObjectURL(blob);
-      const audio  = new Audio(url);
-      // Cancelar el Web Speech y reemplazar con el TTS de Google
-      window.speechSynthesis?.cancel();
+      const blob  = new Blob([bytes], { type: "audio/mp3" });
+      const url   = URL.createObjectURL(blob);
+      const audio = new Audio(url);
       audio.onended = () => { URL.revokeObjectURL(url); setPlaying(null); };
-      audio.onerror = () => { setPlaying(null); };
+      audio.onerror = () => { setPlaying(null); fallback(text, setPlaying); };
       await audio.play();
       return;
     }
   } catch {}
 
-  // Si TTS falla, el Web Speech ya está hablando — solo terminar el estado
-  setPlaying(null);
+  // Fallback solo si TTS falla completamente
+  fallback(text, setPlaying);
+}
+
+function fallback(text: string, setPlaying: (v: string | null) => void) {
+  if (!("speechSynthesis" in window)) { setPlaying(null); return; }
+  window.speechSynthesis.cancel();
+  const utt   = new SpeechSynthesisUtterance(text);
+  utt.lang    = "en-US";
+  utt.rate    = 0.85;
+  utt.onend   = () => setPlaying(null);
+  utt.onerror = () => setPlaying(null);
+  window.speechSynthesis.speak(utt);
 }
 
 interface VerbFormCardProps {
@@ -68,13 +64,9 @@ function VerbFormCard({ label, value, playing, onPlay }: VerbFormCardProps) {
         <p className="text-[var(--color-text-3)] text-xs mb-0.5">{label}</p>
         <p className="font-mono font-medium text-sm">{value}</p>
       </div>
-      <button
-        onClick={() => onPlay(value)}
-        disabled={!!playing && !isPlaying}
+      <button onClick={() => onPlay(value)} disabled={!!playing && !isPlaying}
         className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110 disabled:opacity-40"
-        style={{ background: isPlaying ? "var(--color-acc)" : "rgba(124,106,255,0.15)" }}
-        title={`Escuchar "${value}"`}
-      >
+        style={{ background: isPlaying ? "var(--color-acc)" : "rgba(124,106,255,0.15)" }}>
         {isPlaying ? (
           <span className="flex gap-0.5 items-end h-3">
             {[0,1,2].map((i) => (
@@ -96,28 +88,22 @@ function VerbFormCard({ label, value, playing, onPlay }: VerbFormCardProps) {
 export default function VerbModal({ verb, onClose }: Props) {
   const [playing, setPlaying] = useState<string | null>(null);
 
-  // Reproducir el infinitivo al abrir — solo una vez
   useEffect(() => {
     if (!verb) return;
-    const timer = setTimeout(() => {
-      speakWord(verb.infinitive, setPlaying);
-    }, 200);
+    const timer = setTimeout(() => speakWord(verb.infinitive, setPlaying), 300);
     return () => {
       clearTimeout(timer);
       window.speechSynthesis?.cancel();
       setPlaying(null);
     };
-  }, [verb?.id]); // solo cuando cambia el verbo
+  }, [verb?.id]);
 
   if (!verb) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[var(--radius-xl)] p-6 w-full max-w-sm space-y-4"
         onClick={(e) => e.stopPropagation()}>
-
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">to {verb.infinitive}</h2>
@@ -126,7 +112,6 @@ export default function VerbModal({ verb, onClose }: Props) {
           <button onClick={onClose} className="text-[var(--color-text-2)] hover:text-[var(--color-text)] transition-colors text-lg">✕</button>
         </div>
 
-        {/* Formas principales */}
         <div className="grid grid-cols-2 gap-2">
           <VerbFormCard label="Infinitive"      value={verb.infinitive}              playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
           <VerbFormCard label="Past Simple"     value={verb.pastSimple}              playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
@@ -134,7 +119,6 @@ export default function VerbModal({ verb, onClose }: Props) {
           <VerbFormCard label="Present -ing"    value={verb.forms.presentParticiple} playing={playing} onPlay={(t) => speakWord(t, setPlaying)} />
         </div>
 
-        {/* Presente */}
         <div className="space-y-1.5">
           <p className="text-xs text-[var(--color-text-3)] uppercase tracking-wider">Presente</p>
           <div className="grid grid-cols-2 gap-2">
@@ -143,10 +127,7 @@ export default function VerbModal({ verb, onClose }: Props) {
           </div>
         </div>
 
-        <p className="text-xs text-center text-[var(--color-text-3)]">
-          Toca 🔊 en cada forma para escuchar
-        </p>
-
+        <p className="text-xs text-center text-[var(--color-text-3)]">Toca 🔊 en cada forma para escuchar</p>
         <Button variant="ghost" className="w-full" onClick={onClose}>Cerrar</Button>
       </div>
     </div>
